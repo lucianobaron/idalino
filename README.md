@@ -78,6 +78,15 @@ Nenhuma outra parte do código precisa mudar.
 ## 📁 Estrutura
 
 ```
+docs/                  # documentação do projeto
+  DIRETRIZES.md        # decisões do projeto e procedimentos obrigatórios
+  REGRAS-DE-NEGOCIO.md # controle das regras de negócio (BR-xxx)
+  TECNICO.md           # stack, arquitetura, achados e intercorrências
+fable-method/          # método de raciocínio p/ agentes de IA (vendored)
+hallmark/              # skill de design anti-AI-slop p/ agentes (vendored)
+  AGENTS.md            # instruções do método (qualquer ferramenta)
+  skills/              # fable-method, fable-loop, fable-judge, fable-domain
+  eval/                # cenários de avaliação (traps) e resultados
 prisma/
   schema.prisma        # modelos: produtos, clientes, pedidos, produção
   seed.mjs             # tortas de exemplo
@@ -97,6 +106,54 @@ src/
     auth.ts            # sessão simples do admin (HMAC)
     order-status.ts    # fluxo de produção (transições permitidas)
 ```
+
+## 📚 Documentação do projeto
+
+Três documentos de controle, mantidos em `docs/`:
+
+- [**Diretrizes**](docs/DIRETRIZES.md) — todas as decisões de projeto (DEC-01…DEC-16)
+  com contexto e consequência, e os procedimentos obrigatórios (setup, schema,
+  gateway de pagamento, git, verificação, segurança).
+- [**Regras de negócio**](docs/REGRAS-DE-NEGOCIO.md) — controle rastreável de cada
+  regra (BR-001…BR-026), com a referência no código onde ela vive.
+- [**Técnico**](docs/TECNICO.md) — stack, arquitetura, modelo de dados, API,
+  ambiente, segurança, achados técnicos (ACH-xxx) e registro de intercorrências.
+
+## 🧠 Fable Method (incorporado)
+
+A pasta `fable-method/` é uma cópia (vendored) do repositório
+[Sahir619/fable-method](https://github.com/Sahir619/fable-method) (branch
+`main`), o **Fable Workflow**: um loop estruturado de raciocínio
+(think/act/prove/grow) para agentes de IA, com avaliação adversarial.
+
+- **Uso:** agentes que trabalham neste projeto devem seguir o `AGENTS.md`
+  (método idêntico ao das skills, sem frontmatter específico de Claude).
+- **Skills:** `skills/fable-method`, `skills/fable-loop`,
+  `skills/fable-judge` e `skills/fable-domain` (com `references/` por domínio).
+- **Licença:** MIT (Copyright © 2026 Sahir619) — preservada em `fable-method/LICENSE`.
+- **Atualizar:** baixe novamente o tarball da branch `main` do repositório e
+  substitua a pasta (mantendo este README e a licença).
+
+## 🎨 Hallmark (incorporado)
+
+A pasta `hallmark/` é uma cópia (vendored) da skill de design do repositório
+[Nutlope/hallmark](https://github.com/Nutlope/hallmark) (branch `main`), o
+**Hallmark**: uma skill de design "anti-AI-slop" para agentes de código (Claude
+Code, Cursor, Codex) com 21 temas, 57 gates de slop-test e quatro verbos
+(default / `audit` / `redesign` / `study`).
+
+- **Conteúdo vendored:** apenas a skill em si — `SKILL.md` + `references/`
+  (regras, anti-padrões, componentes, macroestruturas, temas, verbos) — e a
+  licença. O `site/` e os exemplos do repositório **não** foram incorporados
+  (escopo deliberado, ver DEC-17).
+- **Uso:** toda solicitação que envolva **design ou layout de view** (criar,
+  alterar ou redesenhar página, tela ou componente de UI) **deve** usar a skill
+  como ferramenta complementar, carregando `hallmark/SKILL.md` + as
+  `references/` cabíveis (diretriz DEC-18 em `docs/DIRETRIZES.md`).
+- **Licença:** MIT (Copyright © 2026 Together AI) — preservada em `hallmark/LICENSE`.
+- **Atualizar:** rode `node hallmark/update.mjs` (baixa de novo a branch `main`
+  e substitui o conteúdo, mantendo a licença) ou siga o procedimento §3.11 em
+  `docs/DIRETRIZES.md`.
 
 ## 🗒️ Notas
 
