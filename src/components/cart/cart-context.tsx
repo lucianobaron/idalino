@@ -29,11 +29,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [hydrated, setHydrated] = useState(false);
 
-  // Carrega o carrinho do localStorage (apenas no cliente)
+  // Carrega o carrinho do localStorage (apenas no cliente).
+  // Hidratação SSR-safe: o estado inicial é vazio de propósito (casa com o HTML
+  // do servidor); a leitura síncrona do localStorage acontece uma única vez,
+  // após a montagem. A regra set-state-in-effect tem falso positivo para este
+  // padrão canônico de hidratação client-only em Next.js.
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setItems(JSON.parse(raw) as CartItem[]);
+      if (raw) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- hidratação client-only do localStorage
+        setItems(JSON.parse(raw) as CartItem[]);
+      }
     } catch {
       // ignora carrinho corrompido
     }
