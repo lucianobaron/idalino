@@ -84,7 +84,8 @@ async function main() {
     const category = await prisma.category.findUnique({
       where: { slug: product.categorySlug },
     });
-    const { categorySlug, ...data } = product;
+    const data = { ...product };
+    delete data.categorySlug; // campo auxiliar do seed, não existe no modelo Product
     await prisma.product.upsert({
       where: { slug: product.slug },
       update: { ...data, categoryId: category?.id ?? null },
