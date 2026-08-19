@@ -1,0 +1,24 @@
+# Idalino — banco de dados local (PostgreSQL)
+# Uso: docker compose up -d
+# Para derrubar: docker compose down
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: idalino-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: idalino
+      POSTGRES_PASSWORD: idalino
+      POSTGRES_DB: idalino
+    ports:
+      - "5432:5432"
+    volumes:
+      - idalino_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U idalino -d idalino"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  idalino_pgdata:

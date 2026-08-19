@@ -1,0 +1,129 @@
+// Idalino — schema do banco de dados
+// Documentação: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Status do ciclo de vida de um pedido (produção)
+enum OrderStatus {
+  PENDING_PAYMENT // aguardando pagamento
+  PAID            // pago, aguardando entrar em produção
+  IN_PRODUCTION   // em produção
+  READY           // pronto para entrega
+  DELIVERED       // entregue
+  CANCELED        // cancelado
+}
+
+/// Meio de pagamento usado no pedido
+enum PaymentMethod {
+  MOCK // pagamento simulado (desenvolvimento)
+  PIX
+  CARD
+}
+
+model Category {
+  id       String    @id @default(cuid())
+  name     String
+  slug     String    @unique
+  products Product[]
+
+  @@map("categories")
+}
+
+model Product {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  description String
+  /// Preço em centavos (ex.: R$ 89,90 = 8990)
+  priceCents  Int
+  /// Emoji usado como arte de exibição enquanto não há fotos reais
+  emoji       String    @default("🍰")
+  imageUrl    String?
+  categoryId  String?
+  category    Category? @relation(fields: [categoryId], references: [id])
+  available   Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  orderItems  OrderItem[]
+
+  @@map("products")
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  phone     String?
+  createdAt DateTime @default(now())
+  orders    Order[]
+
+  @@map("customers")
+}
+
+model Order {
+  id              String           @id @default(cuid())
+  /// Código curto e amigável exibido ao cliente (001, 002, ...)
+  code            Int              @unique @default(autoincrement())
+  customerId      String
+  customer        Customer         @relation(fields: [customerId], references: [id])
+  status          OrderStatus      @default(PENDING_PAYMENT)
+  paymentMethod   PaymentMethod    @default(MOCK)
+  /// Id do pagamento retornado pelo provedor de pagamento
+  paymentId       String?
+  subtotalCents   Int
+  deliveryFeeCents Int
+  totalCents      Int
+  // Endereço de entrega
+  street          String
+  number          String
+  complement      String?
+  neighborhood    String
+  city            String
+  state           String
+  zip             String
+  /// Observações do cliente (ex.: "sem morango", "recheio extra")
+  notes           String?
+  /// Anotações internas de produção (visível apenas no admin)
+  productionNotes String?
+  items           OrderItem[]
+  events          ProductionEvent[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([customerId])
+  @@index([status])
+  @@map("orders")
+}
+
+model OrderItem {
+  id          String  @id @default(cuid())
+  orderId     String
+  order       Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId   String?
+  product     Product? @relation(fields: [productId], references: [id])
+  /// Nome copiado no momento do pedido (imutável, mesmo se o produto mudar)
+  productName String
+  unitPriceCents Int
+  quantity    Int
+
+  @@map("order_items")
+}
+
+/// Histórico de transições de status (auditoria de produção)
+model ProductionEvent {
+  id         String      @id @default(cuid())
+  orderId    String
+  order      Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  fromStatus OrderStatus?
+  toStatus   OrderStatus
+  note       String?
+  createdAt  DateTime    @default(now())
+
+  @@map("production_events")
+}
