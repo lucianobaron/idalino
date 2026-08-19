@@ -2,7 +2,6 @@
 
 import { useCart } from "./cart/cart-context";
 import { formatBRL } from "@/lib/format";
-import type { CartItem } from "@/lib/types";
 
 interface Props {
   productId: string;
