@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { TortaCard } from "@/components/torta-card";
-import { APP_NAME, APP_TAGLINE } from "@/lib/constants";
+import { Logo } from "@/components/logo";
+import { APP_TAGLINE } from "@/lib/constants";
 
 // Página dinâmica: consulta o banco a cada acesso (sem cache de build)
 export const dynamic = "force-dynamic";
@@ -44,6 +45,7 @@ export default async function HomePage() {
       {/* Hero */}
       <section className="bg-gradient-to-br from-rose-100 via-amber-50 to-white">
         <div className="mx-auto flex max-w-6xl flex-col items-center gap-6 px-4 py-20 text-center">
+          <Logo size={88} />
           <p className="rounded-full bg-rose-600/10 px-4 py-1 text-sm font-semibold text-rose-700">
             Feito à mão, todos os dias
           </p>

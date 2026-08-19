@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
+import { Logo } from "@/components/logo";
 
 const links = [
   { href: "/admin", label: "Visão geral" },
@@ -26,8 +27,9 @@ export function AdminHeader() {
     <header className="border-b border-zinc-200 bg-white">
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
         <div className="flex items-center gap-6">
-          <Link href="/admin" className="font-bold text-zinc-900">
-            🥧 Idalino <span className="text-sm font-medium text-zinc-400">· Admin</span>
+          <Link href="/admin" className="flex items-center gap-2">
+            <Logo size={28} />
+            <span className="text-sm font-medium text-zinc-400">· Admin</span>
           </Link>
           <nav className="flex gap-4">
             {links.map((link) => (

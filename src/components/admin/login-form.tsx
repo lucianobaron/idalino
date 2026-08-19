@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Logo } from "@/components/logo";
 
 export function LoginForm() {
   const router = useRouter();
@@ -37,15 +38,17 @@ export function LoginForm() {
       onSubmit={handleSubmit}
       className="w-full max-w-sm rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm"
     >
-      <p className="text-4xl text-center" aria-hidden>
-        🔐
-      </p>
-      <h1 className="mt-3 text-center text-2xl font-bold text-zinc-900">
-        Painel Idalino
-      </h1>
-      <p className="mt-1 text-center text-sm text-zinc-500">
-        Acesso restrito à fábrica
-      </p>
+      <div className="flex flex-col items-center gap-3">
+        <Logo size={56} />
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-zinc-900">
+            Painel de administração
+          </h1>
+          <p className="mt-1 text-sm text-zinc-500">
+            Acesso restrito à fábrica
+          </p>
+        </div>
+      </div>
 
       <label className="mt-6 block">
         <span className="mb-1 block text-sm font-medium text-zinc-600">

@@ -4,6 +4,7 @@ import Link from "next/link";
 import "./globals.css";
 import { CartProvider } from "@/components/cart/cart-context";
 import { CartButton } from "@/components/cart/cart-button";
+import { Logo } from "@/components/logo";
 import { APP_NAME, APP_TAGLINE } from "@/lib/constants";
 
 const geistSans = Geist({
@@ -36,12 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white/90 backdrop-blur">
             <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
               <Link href="/" className="flex items-center gap-2">
-                <span className="text-2xl" aria-hidden>
-                  🥧
-                </span>
-                <span className="text-xl font-bold tracking-tight text-zinc-900">
-                  {APP_NAME}
-                </span>
+                <Logo size={36} />
               </Link>
               <nav className="flex items-center gap-4">
                 <Link
@@ -65,9 +61,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
           <footer className="border-t border-zinc-200 bg-white">
             <div className="mx-auto flex max-w-6xl flex-col items-center gap-2 px-4 py-8 text-center text-sm text-zinc-500">
-              <p className="font-medium text-zinc-700">
-                {APP_NAME} — {APP_TAGLINE}
-              </p>
+              <Logo size={40} />
+              <p className="font-medium text-zinc-700">{APP_TAGLINE}</p>
               <p>Encomendas pelo site • Pagamento digital • Produção artesanal</p>
               <p className="text-xs text-zinc-400">
                 © {new Date().getFullYear()} {APP_NAME}. Todos os direitos

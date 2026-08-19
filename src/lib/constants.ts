@@ -6,5 +6,6 @@ export const DELIVERY_FEE_CENTS = (() => {
   return Number.isFinite(value) && value >= 0 ? value : 1500; // R$ 15,00
 })();
 
-export const APP_NAME = "Idalino";
+export const APP_NAME = "Idalino Tortas";
 export const APP_TAGLINE = "Tortas artesanais feitas com amor";
+export const APP_LOGO_PATH = "/logoidalino.jpg";
