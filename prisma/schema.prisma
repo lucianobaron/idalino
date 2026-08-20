@@ -27,6 +27,18 @@ enum PaymentMethod {
   CARD
 }
 
+/// Forma de recebimento do pedido escolhida no checkout
+enum DeliveryType {
+  DELIVERY // entrega no endereço informado (taxa por faixa de distância)
+  PICKUP   // retirada na loja (sem taxa, sem endereço)
+}
+
+/// Papel de um usuário no painel admin
+enum AdminRole {
+  ADMIN // acesso total (tortas, entregas, usuários, pedidos)
+  TEAM  // equipe: só visão geral e pedidos (fluxo de produção)
+}
+
 model Category {
   id       String    @id @default(cuid())
   name     String
@@ -43,6 +55,8 @@ model Product {
   description String
   /// Preço em centavos (ex.: R$ 89,90 = 8990)
   priceCents  Int
+  /// Peso da torta em gramas (ex.: 1200 = 1,2 kg)
+  weightGrams Int?
   /// Emoji usado como arte de exibição enquanto não há fotos reais
   emoji       String    @default("🍰")
   imageUrl    String?
@@ -74,19 +88,23 @@ model Order {
   customer        Customer         @relation(fields: [customerId], references: [id])
   status          OrderStatus      @default(PENDING_PAYMENT)
   paymentMethod   PaymentMethod    @default(MOCK)
+  /// Forma de recebimento: entrega ou retirada na loja
+  deliveryType    DeliveryType     @default(DELIVERY)
   /// Id do pagamento retornado pelo provedor de pagamento
   paymentId       String?
   subtotalCents   Int
   deliveryFeeCents Int
   totalCents      Int
-  // Endereço de entrega
-  street          String
-  number          String
+  /// Distância calculada até o ponto de saída (snapshot; nulo na retirada)
+  deliveryDistanceKm Float?
+  // Endereço de entrega (obrigatório apenas quando deliveryType = DELIVERY)
+  street          String?
+  number          String?
   complement      String?
-  neighborhood    String
-  city            String
-  state           String
-  zip             String
+  neighborhood    String?
+  city            String?
+  state           String?
+  zip             String?
   /// Observações do cliente (ex.: "sem morango", "recheio extra")
   notes           String?
   /// Anotações internas de produção (visível apenas no admin)
@@ -126,4 +144,54 @@ model ProductionEvent {
   createdAt  DateTime    @default(now())
 
   @@map("production_events")
+}
+
+/// Faixa de distância para o preço da entrega (ex.: 0–3 km = R$ 10,00)
+model DeliveryFeeRange {
+  id         String   @id @default(cuid())
+  /// Limite inferior da faixa em km (inclusivo)
+  minKm      Float
+  /// Limite superior da faixa em km (exclusivo); null = faixa aberta ("acima de minKm")
+  maxKm      Float?
+  /// Preço da entrega na faixa, em centavos (DEC-01)
+  priceCents Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("delivery_fee_ranges")
+}
+
+/// Ponto de saída da loja (origem do cálculo de distância) — linha única (id fixo "store")
+model StoreSettings {
+  id           String   @id @default("store")
+  /// CEP da loja (fonte da distância; coordenadas resolvidas no salvamento)
+  cep          String
+  /// Coordenadas do CEP resolvidas no salvamento (cálculo de distância)
+  lat          Float
+  lng          Float
+  /// Endereço de exibição (usado na página do pedido quando a retirada é escolhida)
+  street       String?
+  number       String?
+  neighborhood String?
+  city         String?
+  state        String?
+  updatedAt    DateTime @updatedAt
+
+  @@map("store_settings")
+}
+
+/// Usuário com acesso ao painel administrativo (login por e-mail + senha)
+model AdminUser {
+  id           String    @id @default(cuid())
+  name         String
+  /// E-mail único usado no login (armazenado em minúsculas)
+  email        String    @unique
+  /// Hash da senha (scrypt — "salt:hash" em hex; nunca texto puro)
+  passwordHash String
+  /// Papel no painel: ADMIN (tudo) ou TEAM (só visão geral e pedidos)
+  role         AdminRole @default(ADMIN)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@map("admin_users")
 }
