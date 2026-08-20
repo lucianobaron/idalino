@@ -78,15 +78,19 @@ Nenhuma outra parte do código precisa mudar.
 ## 📁 Estrutura
 
 ```
-docs/                  # documentação do projeto
-  DIRETRIZES.md        # decisões do projeto e procedimentos obrigatórios
-  REGRAS-DE-NEGOCIO.md # controle das regras de negócio (BR-xxx)
-  TECNICO.md           # stack, arquitetura, achados e intercorrências
-fable-method/          # método de raciocínio p/ agentes de IA (vendored)
-hallmark/              # skill de design anti-AI-slop p/ agentes (vendored)
-  AGENTS.md            # instruções do método (qualquer ferramenta)
-  skills/              # fable-method, fable-loop, fable-judge, fable-domain
-  eval/                # cenários de avaliação (traps) e resultados
+.claude/skills/          # skill i-have-adhd — formato de interação c/ o dono do projeto
+.github/skills/          # cópia da skill p/ GitHub Copilot
+.hallmark/               # log de decisões de design gerado pela skill hallmark (runtime)
+docs/                    # documentação do projeto
+  DIRETRIZES.md          # decisões do projeto e procedimentos obrigatórios
+  REGRAS-DE-NEGOCIO.md   # controle das regras de negócio (BR-xxx)
+  TECNICO.md             # stack, arquitetura, achados e intercorrências
+fable-method/            # método de raciocínio p/ agentes de IA (vendored)
+  AGENTS.md              # instruções do método (qualquer ferramenta)
+  skills/                # fable-method, fable-loop, fable-judge, fable-domain
+  eval/                  # cenários de avaliação (traps) e resultados
+hallmark/                # skill de design anti-AI-slop p/ agentes (vendored)
+  SKILL.md + references/ # regras de design; LICENSE (MIT); update.mjs
 prisma/
   schema.prisma        # modelos: produtos, clientes, pedidos, produção
   seed.mjs             # tortas de exemplo
@@ -111,7 +115,7 @@ src/
 
 Três documentos de controle, mantidos em `docs/`:
 
-- [**Diretrizes**](docs/DIRETRIZES.md) — todas as decisões de projeto (DEC-01…DEC-16)
+- [**Diretrizes**](docs/DIRETRIZES.md) — todas as decisões de projeto (DEC-01…DEC-18)
   com contexto e consequência, e os procedimentos obrigatórios (setup, schema,
   gateway de pagamento, git, verificação, segurança).
 - [**Regras de negócio**](docs/REGRAS-DE-NEGOCIO.md) — controle rastreável de cada

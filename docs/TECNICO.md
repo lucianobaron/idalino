@@ -55,6 +55,9 @@ idalino/
 │       ├── format.ts      # formatBRL() — centavos → R$
 │       └── types.ts       # CartItem, CheckoutInput (compartilhados)
 ├── public/logoidalino.jpg # logo da marca
+├── .claude/skills/i-have-adhd/  # skill de interação c/ o dono do projeto (DIRETRIZES §3.9)
+├── .github/skills/i-have-adhd/  # cópia da skill p/ GitHub Copilot (instruções de agente)
+├── .hallmark/log.json   # artefato runtime da skill hallmark (log de decisões de design) — ver ACH-12
 ├── fable-method/          # vendored (diretriz de agentes) — ver DIRETRIZES.md DEC-11
 ├── hallmark/              # vendored (skill de design p/ agentes) — ver DIRETRIZES.md DEC-17
 ├── docker-compose.yml     # PostgreSQL 16 local
@@ -149,6 +152,7 @@ Novas descobertas entram aqui com data e referência ao código.
 | ACH-09 | 2026-08-19 | `Order.code` usa `autoincrement` (SERIAL); após `db:reset` a numeração reinicia e pode haver "buracos" (comportamento do PostgreSQL). | Não usar `code` como referência contábil; é exibição amigável. |
 | ACH-10 | 2026-08-19 | Categoria é **opcional** no produto (`categoryId` nulo) e não há gestão de catálogo no painel (produtos são geridos via banco/seed). | Restrição de produto, não bug; avaliar CRUD de catálogo no admin quando necessário. |
 | ACH-11 | 2026-08-19 | O painel admin permite transicionar `PENDING_PAYMENT → PAID` **sem** confirmação do gateway (override manual via `POST /api/admin/orders/[id]/status` — a matriz `canTransition` autoriza e a rota não checa pagamento). | Garantia de "pagar antes de produzir" vale só para o fluxo do cliente. Quando o gateway real entrar, decidir se o override permanece (ex.: pedido pago offline) ou passa a exigir confirmação/justificativa. Ver BR-003. |
+| ACH-12 | 2026-08-19 | A skill hallmark grava `/.hallmark/log.json` na raiz do projeto — log runtime de decisões de design (brief, macroestrutura, tema) — e o arquivo **não está no `.gitignore`** (aparece como untracked no `git status`). | **Decidido (2026-08-19): manter versionado** como histórico de design enquanto as views evoluem (decisão DEC-19 em `DIRETRIZES.md`). Reavaliar quando o design estabilizar: se virar ruído, adicionar `/.hallmark/` ao `.gitignore`. |
 
 ## 9. Registro de intercorrências
 
@@ -164,3 +168,5 @@ data, sintoma, causa, impacto e resolução. Nunca sobrescrever ocorrência anti
 | Data | Quem | Mudança |
 |---|---|---|
 | 2026-08-19 | Documentação | Criação do documento (stack, modelo, API, ambiente, achados ACH-01..11, log de intercorrências) |
+| 2026-08-19 | Documentação | §2: inclusão de `.claude/skills/i-have-adhd`, `.github/skills/i-have-adhd` e `.hallmark/log.json` na estrutura; achado ACH-12 (artefato runtime da hallmark fora do .gitignore) |
+| 2026-08-19 | Documentação | ACH-12: decisão de manter `.hallmark/log.json` versionado (DEC-19 em DIRETRIZES.md) |

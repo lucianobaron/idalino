@@ -238,6 +238,18 @@ Legenda de status: `aceita` (vigente) · `substituída` (vale o histórico, não
   320–768 px, etc.); revisões avaliam o resultado contra os critérios da skill,
   além dos checklists de DEC-16 (§3.10). Ver procedimento operacional: §3.9.
 
+### DEC-19 — `.hallmark/log.json` mantido versionado (histórico de design)
+- **Status:** aceita
+- **Contexto:** a skill hallmark grava `/.hallmark/log.json` na raiz — log runtime
+  de decisões de design (brief, macroestrutura, tema, vibe) — e o arquivo não
+  estava coberto pelo `.gitignore` (achado ACH-12 em `TECNICO.md`).
+- **Decisão:** **manter versionado** o `.hallmark/log.json` enquanto o design das
+  views estiver em evolução: o arquivo é a trilha auditável do que a skill
+  decidiu para cada tela, e perde-lo significaria perder histórico de design.
+- **Consequência:** o arquivo entra no versionamento normalmente; quando o design
+  estabilizar e o log virar ruído, reavaliar (adicionar `/.hallmark/` ao
+  `.gitignore`), registrando a mudança neste arquivo.
+
 ## 3. Procedimentos obrigatórios
 
 ### 3.1 Setup do ambiente (novo dev / máquina nova)
@@ -288,6 +300,9 @@ Legenda de status: `aceita` (vigente) · `substituída` (vale o histórico, não
    status no admin).
 4. Se mexeu em regra de negócio: atualize `REGRAS-DE-NEGOCIO.md`.
 5. Se descobriu achado técnico ou teve intercorrência: registre em `TECNICO.md` §7/§9.
+6. **Conferência obrigatória de documentação (§3.12)** — antes de declarar a tarefa
+   concluída, responda às duas perguntas e registre o que for devido. Sem isso, a
+   tarefa **não está concluída**.
 
 ### 3.7 Convenções de código
 - **Dinheiro:** sempre inteiro em centavos, sufixo `Cents` (DEC-01); exibir com
@@ -332,6 +347,12 @@ skill `fable-method` (Claude Code):
 A skill é **complementar**: quando ela conflitar com este arquivo, este arquivo manda;
 quando conflitar com instrução direta do usuário, a instrução do usuário manda.
 
+**Antes de declarar "done" (§3.12).** O passo 6 (verificar) e o passo 7 (reportar)
+do loop **não** encerram a tarefa sozinhos: antes de considerar a solicitação
+concluída, aplique a **conferência obrigatória de documentação** — (1) existe
+informação que deve ser registrada? (2) a documentação do projeto foi atualizada?
+(procedimento completo na seção 3.12). O registro devido é parte da entrega.
+
 **Design e layout de views (DEC-18).** Além do loop acima, **toda solicitação que
 envolva design ou layout de view** — criar, alterar ou redesenhar página, tela ou
 componente de UI — **deve** carregar a skill `hallmark` como ferramenta complementar
@@ -340,6 +361,15 @@ anti-patterns; verbos `audit`/`redesign`/`study` quando aplicáveis) e aplicar a
 regras dela ao resultado (estrutura variada, copy honesta, tokens travados,
 responsividade 320–768 px, etc.). A hallmark é complementar ao fable-method: o loop
 de raciocínio continua sendo o §3.9; a hallmark rege **o que** a UI deve ser.
+
+**Formato de interação (skill `i-have-adhd`).** Toda interação do harness com o
+dono do projeto **deve** seguir a estrutura obrigatória da skill
+`.claude/skills/i-have-adhd/SKILL.md`: (1) confirmação do que foi compreendido,
+(2) resumo numerado das etapas, (3) conclusão com o que ficou pronto e uma única
+próxima ação. A estrutura prevalece sobre recapitulações vazias; as demais regras
+da skill (liderar com a próxima ação, listas com no máximo 5 itens, sem
+preâmbulo ou encerramento vazios, estimativas de tempo concretas) valem em toda
+resposta, até o dono do projeto dizer "stop adhd mode".
 
 ### 3.10 Padrões de desenvolvimento limpo e segurança (checklist de revisão)
 Aplicar em toda mudança, antes de dar como concluída (DEC-16):
@@ -366,6 +396,35 @@ Aplicar em toda mudança, antes de dar como concluída (DEC-16):
    substitua o conteúdo de `hallmark/` (exceto `update.mjs`).
 3. Confira se `hallmark/SKILL.md` continua coerente com `references/`.
 
+### 3.12 Conferência obrigatória antes de declarar a tarefa concluída
+> **Obrigatório e importantíssimo.** Nenhuma tarefa pode ser considerada
+> realizada sem passar por esta conferência. Ela é o último passo de toda
+> entrega — vale para código, análise, pesquisa, documentação e qualquer outro
+> tipo de trabalho no projeto.
+
+Antes de declarar uma tarefa concluída — e **obrigatoriamente** antes de reportar
+ao dono do projeto — responda às **duas perguntas**:
+
+**1. Existe informação que deve ser registrada?**
+- Novo achado técnico ou observação relevante → `docs/TECNICO.md` §8 (achados, novo `ACH-xxx`).
+- Intercorrência ocorrida → `docs/TECNICO.md` §9 (log de intercorrências, novo `INC-xxx`).
+- Nova regra de negócio ou mudança em regra existente → `docs/REGRAS-DE-NEGOCIO.md`
+  (nova `BR-xxx` ou atualização da `BR` afetada).
+- Nova decisão de projeto ou mudança de decisão → seção 2 deste arquivo (nova `DEC-x`).
+- Mudança em procedimento → seção 3 deste arquivo.
+
+**2. A documentação do projeto foi atualizada?**
+- Confira os três documentos de `docs/` (`DIRETRIZES.md`, `REGRAS-DE-NEGOCIO.md`,
+  `TECNICO.md`) e o `README.md` quando a mudança afetar stack, estrutura ou uso.
+- Atualize as **tabelas de controle de mudanças** de cada documento afetado
+  (data + descrição da mudança).
+- Trabalho que altera comportamento ou estado do sistema **sem documentação
+  correspondente é considerado incompleto** — "funciona" não basta.
+
+**Regra de ouro:** se a resposta a qualquer pergunta for "sim, há algo a
+registrar/atualizar", a tarefa **não está concluída** até o registro ser feito.
+Não existe check-out apressado que dispense esta conferência.
+
 ## 4. Controle de mudanças deste documento
 
 | Data | Quem | Mudança |
@@ -374,3 +433,6 @@ Aplicar em toda mudança, antes de dar como concluída (DEC-16):
 | 2026-08-19 | Diretrizes | Inclusão de DEC-15 (skill fable-method como ferramenta complementar), DEC-16 (desenvolvimento limpo e segurança sempre prioritários) e procedimentos 3.9–3.10 |
 | 2026-08-19 | Diretrizes | Inclusão de DEC-17 (skill hallmark vendored como referência de design) e procedimento 3.11 |
 | 2026-08-19 | Diretrizes | Inclusão de DEC-18 (skill hallmark como ferramenta complementar em design e layout de views) e atualização do procedimento 3.9 |
+| 2026-08-19 | Diretrizes | §3.9: inclusão do skill i-have-adhd (formato de interação obrigatório com o dono do projeto) |
+| 2026-08-19 | Diretrizes | Inclusão do procedimento **§3.12 — conferência obrigatória antes de declarar a tarefa concluída** (existe informação a registrar? documentação atualizada?), com referências no §3.6 e §3.9 |
+| 2026-08-19 | Diretrizes | Inclusão de DEC-19 (`.hallmark/log.json` mantido versionado como histórico de design, fechando o achado ACH-12) |
