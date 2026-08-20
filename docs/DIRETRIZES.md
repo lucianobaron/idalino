@@ -258,10 +258,16 @@ Legenda de status: `aceita` (vigente) · `substituída` (vale o histórico, não
 - **Decisão:** a skill `i-have-adhd` (vendored em `.claude/skills/i-have-adhd/`,
   com cópia em `.github/skills/i-have-adhd/` para GitHub Copilot; commit `cfba827`)
   define o **formato de interação obrigatório** entre o harness/agentes e o dono do
-  projeto: (1) confirmação do que foi compreendido, (2) resumo numerado das etapas,
-  (3) conclusão com o que ficou pronto e uma única próxima ação. Vale em **toda**
-  resposta, até o dono dizer "stop adhd mode". Procedimento operacional: §3.9
-  (bloco "Formato de interação").
+  projeto: (1) compreensão apresentada **antes** de processar o prompt, com parada
+  obrigatória até a autorização explícita do dono; (2) após a autorização, cada
+  etapa anunciada antes de executar e resumida ao concluir; (3) resumo geral ao
+  final, com uma única próxima ação se restar algo. Vale em **toda** resposta, até
+  o dono dizer "stop adhd mode". Procedimento operacional: §3.9 (bloco "Formato de
+  interação").
+- **Formato (alterado em 2026-08-20):** o fluxo passou a ser: compreensão → aguardar
+  autorização → etapa a etapa (anunciar + executar + resumir o resultado de cada
+  etapa) → resumo geral. A mudança está na seção local do `SKILL.md` (nas duas
+  cópias) e no bloco "Formato de interação" do §3.9.
 - **Onde:** `.claude/skills/i-have-adhd/SKILL.md` (+ `agents/` com perfis para
   Gemini/OpenAI) e `.github/skills/i-have-adhd/SKILL.md`.
 - **Consequência:** respostas seguem a estrutura obrigatória; regras da skill
@@ -510,12 +516,14 @@ de raciocínio continua sendo o §3.9; a hallmark rege **o que** a UI deve ser.
 
 **Formato de interação (skill `i-have-adhd`).** Toda interação do harness com o
 dono do projeto **deve** seguir a estrutura obrigatória da skill
-`.claude/skills/i-have-adhd/SKILL.md`: (1) confirmação do que foi compreendido,
-(2) resumo numerado das etapas, (3) conclusão com o que ficou pronto e uma única
-próxima ação. A estrutura prevalece sobre recapitulações vazias; as demais regras
-da skill (liderar com a próxima ação, listas com no máximo 5 itens, sem
-preâmbulo ou encerramento vazios, estimativas de tempo concretas) valem em toda
-resposta, até o dono do projeto dizer "stop adhd mode".
+`.claude/skills/i-have-adhd/SKILL.md`: (1) **compreensão antes de processar** —
+o harness apresenta o que entendeu do prompt e **para até a autorização explícita
+do dono**; (2) **etapa a etapa** — após a autorização, cada etapa é anunciada
+antes de executar e resumida ao concluir; (3) **resumo geral** ao final, com uma
+única próxima ação se restar algo. A estrutura prevalece sobre recapitulações
+vazias; as demais regras da skill (liderar com a próxima ação, listas com no
+máximo 5 itens, sem preâmbulo ou encerramento vazios, estimativas de tempo
+concretas) valem em toda resposta, até o dono do projeto dizer "stop adhd mode".
 
 ### 3.10 Padrões de desenvolvimento limpo e segurança (checklist de revisão)
 Aplicar em toda mudança, antes de dar como concluída (DEC-16):
@@ -571,6 +579,34 @@ ao dono do projeto — responda às **duas perguntas**:
 registrar/atualizar", a tarefa **não está concluída** até o registro ser feito.
 Não existe check-out apressado que dispense esta conferência.
 
+### 3.13 Verificar e atualizar as skills vendored (check de sincronia)
+**Regra de gatilho:** quando o dono do projeto pedir para **atualizar** (ou
+conferir) as skills vendored — em qualquer frase, ex.: "atualize as skills",
+"as skills estão atualizadas?" — o agente **deve** rodar `npm run skills:check`
+antes de qualquer outra ação e reportar o resultado por observação, seguindo os
+passos abaixo.
+1. Rode `npm run skills:check` (script `check-skills.mjs`, na raiz) — compara o
+   conteúdo de `fable-method/`, `hallmark/` e `.claude/skills/i-have-adhd/` (e a
+   cópia `.github/skills/i-have-adhd/`) com a branch `main` dos repositórios
+   originais (Sahir619/fable-method, Nutlope/hallmark, ayghri/i-have-adhd), por
+   blob SHA (git) de cada arquivo. Exit `0` = sincronizadas · `1` = divergência ·
+   `2` = erro (rede/GitHub indisponível).
+2. Divergências (exit `1`) indicam o que mudou no upstream; atualize pela via de
+   cada skill:
+   - **fable-method:** baixe o tarball da branch `main` e substitua a pasta (§3.4);
+   - **hallmark:** rode `node hallmark/update.mjs` (§3.11);
+   - **i-have-adhd:** baixe `skills/i-have-adhd/` de `ayghri/i-have-adhd` (branch
+     `main`) e substitua `.claude/skills/i-have-adhd/` **e**
+     `.github/skills/i-have-adhd/`, **reaplicando a seção local "Estrutura
+     obrigatória de resposta (diretriz do projeto)"** no `SKILL.md` (o check a
+     ignora por design — se ela sumir, o check sinaliza divergência).
+3. Após atualizar, rode `npm run skills:check` de novo até sair `OK` (verificação
+   por observação) e confira que `fable-method/AGENTS.md` e `hallmark/SKILL.md`
+   continuam coerentes com o uso descrito neste arquivo.
+4. Não edite o conteúdo vendored (DEC-11/DEC-17): mudanças de regra são propostas
+   nos repositórios originais. Única exceção: a seção local do i-have-adhd
+   (DEC-20), que é do projeto e se reaplica a cada atualização.
+
 ## 4. Controle de mudanças deste documento
 
 | Data | Quem | Mudança |
@@ -592,3 +628,6 @@ Não existe check-out apressado que dispense esta conferência.
 | 2026-08-20 | Diretrizes | DEC-23 marcada como `substituída`; inclusão de DEC-24 (controle de quantidade padrão de mercado: stepper "− quantidade +" + excluir via lixeira, persistente, refletindo o carrinho; `CartControls` com variantes card/hero; removidos `add-to-cart-button.tsx` e `use-add-to-cart.ts`) |
 | 2026-08-20 | Diretrizes | DEC-22: endurecimento — portão central de sessão no route group `(painel)` (`src/app/admin/(painel)/layout.tsx` com `requireAdmin()`); páginas do painel movidas para o grupo (URLs inalteradas); guardas por página mantidas como defesa em profundidade (fecha relato de área admin acessível sem login — ver ACH-21 em `TECNICO.md`) |
 | 2026-08-20 | Diretrizes | DEC-22: política de sessão alterada — cookie de **sessão do navegador** (sem `maxAge`), morre ao fechar o navegador; `/admin` volta a pedir login a cada abertura (decisão do dono); teto de `exp` (3 dias) mantido no token como limite máximo no servidor |
+| 2026-08-20 | Diretrizes | Inclusão do procedimento **§3.13 — verificar e atualizar as skills vendored**: script `npm run skills:check` (`check-skills.mjs`, compara blobs SHA locais × upstream `main` das 3 skills), vias de atualização por skill (incluindo o i-have-adhd, que não tinha procedimento, com reaplicação da seção local do SKILL.md) |
+| 2026-08-20 | Diretrizes | §3.13: **regra de gatilho** — quando o dono do projeto pedir para atualizar/conferir as skills vendored, o agente deve rodar `npm run skills:check` antes de qualquer outra ação e reportar o resultado por observação |
+| 2026-08-20 | Diretrizes | DEC-20 e §3.9: formato de interação do i-have-adhd reajustado — compreensão apresentada **antes** de processar o prompt, com parada até autorização explícita do dono; após a autorização, cada etapa anunciada antes e resumida ao concluir; resumo geral ao final (seção local do `SKILL.md` nas duas cópias, `.claude` e `.github`) |

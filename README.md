@@ -95,6 +95,7 @@ fable-method/            # método de raciocínio p/ agentes de IA (vendored)
   eval/                  # cenários de avaliação (traps) e resultados
 hallmark/                # skill de design anti-AI-slop p/ agentes (vendored)
   SKILL.md + references/ # regras de design; LICENSE (MIT); update.mjs
+check-skills.mjs         # verifica sincronia das skills vendored × upstream (npm run skills:check)
 prisma/
   schema.prisma        # modelos: produtos, clientes, pedidos, faixas de entrega, usuários admin
   seed.mjs             # tortas, faixas de entrega e admin inicial de exemplo
@@ -143,6 +144,8 @@ A pasta `fable-method/` é uma cópia (vendored) do repositório
 - **Licença:** MIT (Copyright © 2026 Sahir619) — preservada em `fable-method/LICENSE`.
 - **Atualizar:** baixe novamente o tarball da branch `main` do repositório e
   substitua a pasta (mantendo este README e a licença).
+- **Conferir sincronia:** `npm run skills:check` (procedimento §3.13 em
+  `docs/DIRETRIZES.md`).
 
 ## 🎨 Hallmark (incorporado)
 
@@ -164,6 +167,8 @@ Code, Cursor, Codex) com 21 temas, 57 gates de slop-test e quatro verbos
 - **Atualizar:** rode `node hallmark/update.mjs` (baixa de novo a branch `main`
   e substitui o conteúdo, mantendo a licença) ou siga o procedimento §3.11 em
   `docs/DIRETRIZES.md`.
+- **Conferir sincronia:** `npm run skills:check` (procedimento §3.13 em
+  `docs/DIRETRIZES.md`).
 
 ## 🗒️ Notas
 

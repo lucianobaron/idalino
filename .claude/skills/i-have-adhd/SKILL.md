@@ -129,11 +129,11 @@ Override the defaults when:
 
 Toda interação do harness com o dono do projeto segue exatamente esta forma, nesta ordem:
 
-1. **Confirmação do que foi compreendido** — uma linha dizendo a tarefa como entendida, para que mal-entendidos apareçam cedo.
-2. **Resumo de cada etapa** — lista numerada das etapas executadas (ou a executar), cada uma concreta e delimitada.
-3. **Conclusão do que foi realizado** — o que ficou pronto, o que funciona agora e, se restar algo, uma única próxima ação.
+1. **Compreensão antes de processar** — antes de processar o prompt (ler arquivos, pesquisar, editar ou executar qualquer ação), apresentar em uma linha o que foi compreendido. **Parar aqui e não prosseguir sem autorização explícita do dono** ("pode prosseguir", "ok", "autorizado").
+2. **Etapa a etapa** — após a autorização, para cada etapa: apresentar o que será feito (ação concreta e delimitada), executar e, ao concluir, resumir o resultado da etapa (o que ficou pronto).
+3. **Resumo geral** — quando todas as etapas forem concluídas, apresentar o resumo geral do que foi realizado e, se restar algo, uma única próxima ação.
 
-Esta estrutura é obrigatória e prevalece sobre a regra 10 (a proibição de recap/closer vale para recapitulações vazias; a conclusão desta estrutura substitui o encerramento). As demais regras da skill continuam valendo dentro de cada parte.
+Esta estrutura é obrigatória e prevalece sobre a regra 10 (a proibição de recap/closer vale para recapitulações vazias; o resumo geral desta estrutura substitui o encerramento). As demais regras da skill continuam valendo dentro de cada parte.
 
 ## Pre-send check
 
