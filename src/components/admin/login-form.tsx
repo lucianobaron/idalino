@@ -36,30 +36,26 @@ export function LoginForm() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="w-full max-w-sm rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm"
+      className="w-full max-w-sm rounded-2xl border border-rule bg-paper-2 p-8"
     >
       <div className="flex flex-col items-center gap-3">
         <Logo size={56} />
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-zinc-900">
+          <h1 className="font-display text-2xl font-semibold text-ink">
             Painel de administração
           </h1>
-          <p className="mt-1 text-sm text-zinc-500">
-            Acesso restrito à fábrica
-          </p>
+          <p className="mt-1 text-sm text-muted">Acesso restrito à fábrica</p>
         </div>
       </div>
 
       <label className="mt-6 block">
-        <span className="mb-1 block text-sm font-medium text-zinc-600">
-          Senha
-        </span>
+        <span className="mb-1 block text-sm font-medium text-muted">Senha</span>
         <input
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
-          className="w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm outline-none transition focus:border-rose-500 focus:ring-2 focus:ring-rose-200"
+          className="w-full rounded-xl border border-rule bg-paper px-3 py-2 text-sm text-ink outline-none transition placeholder:text-faint focus:border-accent focus:ring-2 focus:ring-accent/25"
         />
       </label>
 
@@ -72,16 +68,10 @@ export function LoginForm() {
       <button
         type="submit"
         disabled={loading}
-        className="mt-6 w-full rounded-full bg-rose-600 py-3 font-semibold text-white transition hover:bg-rose-700 disabled:opacity-60"
+        className="mt-6 w-full rounded-full bg-accent py-3 font-semibold text-white transition hover:bg-accent-deep disabled:opacity-60"
       >
-        {loading ? "Entrando..." : "Entrar"}
+        {loading ? "Entrando…" : "Entrar"}
       </button>
-
-      <p className="mt-4 text-center text-xs text-zinc-400">
-        Senha padrão de desenvolvimento:{" "}
-        <code className="rounded bg-zinc-100 px-1 py-0.5">idalino-admin</code>{" "}
-        (altere em .env)
-      </p>
     </form>
   );
 }

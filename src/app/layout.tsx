@@ -1,11 +1,17 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Fraunces, Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
 import { CartProvider } from "@/components/cart/cart-context";
 import { CartButton } from "@/components/cart/cart-button";
 import { Logo } from "@/components/logo";
 import { APP_NAME, APP_TAGLINE } from "@/lib/constants";
+
+const fraunces = Fraunces({
+  variable: "--font-fraunces",
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+});
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,11 +36,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="pt-BR"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${fraunces.variable} ${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="flex min-h-full flex-col bg-zinc-50 font-sans text-zinc-900">
+      <body className="flex min-h-full flex-col bg-paper font-sans text-ink">
         <CartProvider>
-          <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white/90 backdrop-blur">
+          {/* Nav N1a — soft, integrada ao papel: sem sticky, sem hairline */}
+          <header className="bg-paper">
             <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
               <Link href="/" className="flex items-center gap-2">
                 <Logo size={36} />
@@ -42,13 +49,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <nav className="flex items-center gap-4">
                 <Link
                   href="/#tortas"
-                  className="hidden text-sm font-medium text-zinc-600 hover:text-zinc-900 sm:block"
+                  className="hidden text-sm font-medium text-muted transition hover:text-ink sm:block"
                 >
                   Tortas
                 </Link>
                 <Link
                   href="/#como-funciona"
-                  className="hidden text-sm font-medium text-zinc-600 hover:text-zinc-900 sm:block"
+                  className="hidden text-sm font-medium text-muted transition hover:text-ink sm:block"
                 >
                   Como funciona
                 </Link>
@@ -59,12 +66,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
           <main className="flex-1">{children}</main>
 
-          <footer className="border-t border-zinc-200 bg-white">
-            <div className="mx-auto flex max-w-6xl flex-col items-center gap-2 px-4 py-8 text-center text-sm text-zinc-500">
-              <Logo size={40} />
-              <p className="font-medium text-zinc-700">{APP_TAGLINE}</p>
-              <p>Encomendas pelo site • Pagamento digital • Produção artesanal</p>
-              <p className="text-xs text-zinc-400">
+          {/* Footer Ft5 — statement de fechamento */}
+          <footer className="border-t border-rule bg-paper-2">
+            <div className="mx-auto max-w-6xl px-4 py-12">
+              <Logo size={44} />
+              <p className="mt-6 max-w-md font-display text-2xl font-medium leading-snug text-ink sm:text-3xl">
+                Feito à mão, todos os dias.
+              </p>
+              <p className="mt-4 text-sm text-muted">
+                Encomendas pelo site · Pagamento digital · Produção artesanal
+              </p>
+              <p className="mt-8 text-xs text-faint">
                 © {new Date().getFullYear()} {APP_NAME}. Todos os direitos
                 reservados.
               </p>

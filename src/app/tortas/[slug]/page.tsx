@@ -21,38 +21,44 @@ export default async function TortaPage({
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
-      <nav className="mb-6 text-sm text-zinc-500">
-        <Link href="/" className="hover:text-zinc-900">
+      <nav className="mb-6 text-sm text-muted">
+        <Link href="/" className="transition hover:text-ink">
           Início
         </Link>
-        <span className="mx-2">/</span>
+        <span className="mx-2" aria-hidden>
+          /
+        </span>
         <span>{product.name}</span>
       </nav>
 
       <div className="grid gap-10 lg:grid-cols-2">
-        <div className="flex h-80 items-center justify-center rounded-3xl bg-gradient-to-br from-rose-100 to-amber-100 text-[10rem] lg:h-[26rem]">
+        <div className="flex h-80 items-center justify-center rounded-3xl border border-rule bg-paper-2 text-[10rem] lg:h-[26rem]">
           <span aria-hidden>{product.emoji}</span>
         </div>
 
         <div className="flex flex-col gap-4">
           {product.category && (
-            <span className="w-fit rounded-full bg-rose-600/10 px-3 py-1 text-sm font-medium text-rose-700">
+            <span className="w-fit rounded-full bg-accent-soft px-3 py-1 text-sm font-medium text-accent-deep">
               {product.category.name}
             </span>
           )}
-          <h1 className="text-3xl font-bold text-zinc-900 sm:text-4xl">
+          <h1 className="font-display text-3xl font-semibold leading-tight text-ink sm:text-4xl">
             {product.name}
           </h1>
-          <p className="text-lg leading-relaxed text-zinc-600">
+          <p className="text-lg leading-relaxed text-muted">
             {product.description}
           </p>
 
-          <div className="mt-2 flex items-center gap-4">
-            <span className="text-3xl font-extrabold text-zinc-900">
+          <div className="mt-2 flex flex-wrap items-center gap-4">
+            <span className="text-3xl font-extrabold tabular-nums text-ink">
               {formatBRL(product.priceCents)}
             </span>
-            <span className="rounded-full bg-green-100 px-3 py-1 text-sm font-medium text-green-700">
-              Disponivel para encomenda
+            <span className="inline-flex items-center gap-2 text-sm font-medium text-green-700">
+              <span
+                className="h-2 w-2 rounded-full bg-green-600"
+                aria-hidden
+              />
+              Disponível para encomenda
             </span>
           </div>
 
@@ -66,8 +72,8 @@ export default async function TortaPage({
             />
           </div>
 
-          <div className="mt-6 rounded-2xl border border-zinc-200 bg-white p-5 text-sm text-zinc-600">
-            <p className="font-semibold text-zinc-900">Informações importantes</p>
+          <div className="mt-6 rounded-2xl border border-rule bg-paper-2 p-5 text-sm leading-relaxed text-muted">
+            <p className="font-semibold text-ink">Informações importantes</p>
             <ul className="mt-2 list-inside list-disc space-y-1">
               <li>Encomendas feitas até as 18h são entregues no dia seguinte.</li>
               <li>Entregamos em toda a cidade e região.</li>

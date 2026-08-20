@@ -24,12 +24,12 @@ export function AdminHeader() {
   }
 
   return (
-    <header className="border-b border-zinc-200 bg-white">
+    <header className="border-b border-rule bg-paper-2">
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
         <div className="flex items-center gap-6">
           <Link href="/admin" className="flex items-center gap-2">
             <Logo size={28} />
-            <span className="text-sm font-medium text-zinc-400">· Admin</span>
+            <span className="text-sm font-medium text-faint">· Admin</span>
           </Link>
           <nav className="flex gap-4">
             {links.map((link) => (
@@ -38,8 +38,8 @@ export function AdminHeader() {
                 href={link.href}
                 className={`text-sm font-medium transition ${
                   pathname === link.href
-                    ? "text-rose-700"
-                    : "text-zinc-500 hover:text-zinc-900"
+                    ? "text-accent"
+                    : "text-muted hover:text-ink"
                 }`}
               >
                 {link.label}
@@ -51,9 +51,9 @@ export function AdminHeader() {
           type="button"
           onClick={handleLogout}
           disabled={loggingOut}
-          className="text-sm font-medium text-zinc-500 transition hover:text-rose-700 disabled:opacity-50"
+          className="text-sm font-medium text-muted transition hover:text-accent disabled:opacity-50"
         >
-          {loggingOut ? "Saindo..." : "Sair"}
+          {loggingOut ? "Saindo…" : "Sair"}
         </button>
       </div>
     </header>

@@ -38,7 +38,7 @@ export function Logo({
       {showName && (
         <span
           className={`text-xl font-bold tracking-tight ${
-            inverted ? "text-white" : "text-zinc-900"
+            inverted ? "text-white" : "text-ink"
           }`}
         >
           {APP_NAME}

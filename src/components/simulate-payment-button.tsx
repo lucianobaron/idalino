@@ -37,7 +37,7 @@ export function SimulatePaymentButton({ orderId }: { orderId: string }) {
         disabled={loading}
         className="rounded-full bg-amber-600 px-6 py-3 font-semibold text-white transition hover:bg-amber-700 disabled:opacity-60"
       >
-        {loading ? "Confirmando..." : "Simular pagamento aprovado"}
+        {loading ? "Confirmando…" : "Simular pagamento aprovado"}
       </button>
       {error && (
         <p className="mt-3 text-sm font-medium text-red-600">{error}</p>

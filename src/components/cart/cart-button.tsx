@@ -10,12 +10,11 @@ export function CartButton() {
   return (
     <Link
       href="/carrinho"
-      className="relative inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition hover:border-zinc-300 hover:bg-zinc-50"
+      className="relative inline-flex items-center gap-2 rounded-full border border-rule bg-paper-2 px-4 py-2 text-sm font-medium text-ink transition hover:border-accent"
     >
-      <span aria-hidden>🛒</span>
-      <span>Carrinho</span>
+      Carrinho
       {itemCount > 0 && (
-        <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-600 px-1 text-xs font-bold text-white">
+        <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1 text-xs font-bold tabular-nums text-white">
           {itemCount}
         </span>
       )}

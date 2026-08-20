@@ -1,7 +1,6 @@
 "use client";
 
 import { useCart } from "./cart/cart-context";
-import { formatBRL } from "@/lib/format";
 
 interface Props {
   productId: string;
@@ -24,10 +23,12 @@ export function AddToCartButton({
   return (
     <button
       type="button"
-      onClick={() => addItem({ productId, slug, name, emoji, priceCents, quantity: 1 })}
-      className="rounded-full bg-rose-600 px-8 py-3 text-base font-semibold text-white transition hover:bg-rose-700 active:scale-95"
+      onClick={() =>
+        addItem({ productId, slug, name, emoji, priceCents, quantity: 1 })
+      }
+      className="whitespace-nowrap rounded-full bg-accent px-8 py-3 text-base font-semibold text-white transition hover:bg-accent-deep"
     >
-      Adicionar ao carrinho — {formatBRL(priceCents)}
+      Adicionar ao carrinho
     </button>
   );
 }

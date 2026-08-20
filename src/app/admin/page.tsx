@@ -29,33 +29,30 @@ export default async function AdminDashboardPage() {
     ]);
 
   const stats = [
-    { label: "Pedidos hoje", value: ordersToday, emoji: "📦" },
-    { label: "Aguardando pagamento", value: pending, emoji: "⏳" },
-    { label: "Em produção", value: inProduction, emoji: "👩‍🍳" },
-    { label: "Pagos", value: paid, emoji: "✅" },
-    { label: "Prontos p/ entrega", value: ready, emoji: "🛍️" },
-    { label: "Entregues", value: delivered, emoji: "🎉" },
+    { label: "Pedidos hoje", value: ordersToday },
+    { label: "Aguardando pagamento", value: pending },
+    { label: "Em produção", value: inProduction },
+    { label: "Pagos", value: paid },
+    { label: "Prontos p/ entrega", value: ready },
+    { label: "Entregues", value: delivered },
   ];
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
       <AdminHeader />
 
-      <h1 className="mt-6 text-3xl font-bold text-zinc-900">Visão geral</h1>
+      <h1 className="mt-6 font-display text-3xl font-semibold text-ink">
+        Visão geral
+      </h1>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {stats.map((stat) => (
           <div
             key={stat.label}
-            className="rounded-2xl border border-zinc-200 bg-white p-5"
+            className="rounded-2xl border border-rule bg-paper-2 p-5"
           >
-            <p className="text-sm text-zinc-500">
-              <span className="mr-1" aria-hidden>
-                {stat.emoji}
-              </span>
-              {stat.label}
-            </p>
-            <p className="mt-1 text-3xl font-extrabold text-zinc-900">
+            <p className="text-sm text-muted">{stat.label}</p>
+            <p className="mt-1 text-3xl font-extrabold tabular-nums text-ink">
               {stat.value}
             </p>
           </div>
@@ -64,18 +61,20 @@ export default async function AdminDashboardPage() {
 
       <section className="mt-10">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold text-zinc-900">Últimos pedidos</h2>
+          <h2 className="font-display text-xl font-semibold text-ink">
+            Últimos pedidos
+          </h2>
           <Link
             href="/admin/pedidos"
-            className="text-sm font-medium text-rose-700 hover:underline"
+            className="text-sm font-medium text-accent transition hover:text-accent-deep"
           >
             Ver todos →
           </Link>
         </div>
 
-        <div className="mt-4 overflow-x-auto rounded-2xl border border-zinc-200 bg-white">
+        <div className="mt-4 overflow-x-auto rounded-2xl border border-rule bg-paper-2">
           <table className="w-full min-w-[640px] text-left text-sm">
-            <thead className="border-b border-zinc-200 text-xs uppercase tracking-wide text-zinc-400">
+            <thead className="border-b border-rule text-xs uppercase tracking-wide text-faint">
               <tr>
                 <th className="px-4 py-3">Pedido</th>
                 <th className="px-4 py-3">Cliente</th>
@@ -84,12 +83,12 @@ export default async function AdminDashboardPage() {
                 <th className="px-4 py-3">Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-100">
+            <tbody className="divide-y divide-rule">
               {recentOrders.map((order) => (
-                <tr key={order.id} className="hover:bg-zinc-50">
-                  <td className="px-4 py-3 font-semibold text-zinc-900">
+                <tr key={order.id} className="transition hover:bg-paper-3">
+                  <td className="px-4 py-3 font-semibold text-ink">
                     #{String(order.code).padStart(3, "0")}
-                    <p className="text-xs font-normal text-zinc-400">
+                    <p className="text-xs font-normal text-faint">
                       {order.createdAt.toLocaleString("pt-BR", {
                         day: "2-digit",
                         month: "2-digit",
@@ -98,13 +97,13 @@ export default async function AdminDashboardPage() {
                       })}
                     </p>
                   </td>
-                  <td className="px-4 py-3 text-zinc-700">
+                  <td className="px-4 py-3 text-muted">
                     {order.customer.name}
                   </td>
-                  <td className="px-4 py-3 text-zinc-600">
+                  <td className="px-4 py-3 text-muted">
                     {order.items.reduce((sum, i) => sum + i.quantity, 0)} itens
                   </td>
-                  <td className="px-4 py-3 font-medium text-zinc-900">
+                  <td className="px-4 py-3 font-medium tabular-nums text-ink">
                     {formatBRL(order.totalCents)}
                   </td>
                   <td className="px-4 py-3">
@@ -120,7 +119,7 @@ export default async function AdminDashboardPage() {
                 <tr>
                   <td
                     colSpan={5}
-                    className="px-4 py-10 text-center text-zinc-400"
+                    className="px-4 py-10 text-center text-faint"
                   >
                     Nenhum pedido ainda. As encomendas da vitrine aparecem
                     aqui.

@@ -20,7 +20,7 @@ export function CopyButton({ text }: { text: string }) {
     <button
       type="button"
       onClick={handleCopy}
-      className="shrink-0 rounded-xl border border-amber-300 bg-white px-3 py-2 text-xs font-semibold text-amber-800 transition hover:bg-amber-100"
+      className="shrink-0 rounded-xl border border-amber-300 bg-paper-2 px-3 py-2 text-xs font-semibold text-amber-800 transition hover:bg-amber-100"
     >
       {copied ? "Copiado ✓" : "Copiar"}
     </button>

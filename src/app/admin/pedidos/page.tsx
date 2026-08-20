@@ -23,8 +23,10 @@ export default async function AdminOrdersPage() {
     <div className="mx-auto max-w-6xl px-4 py-8">
       <AdminHeader />
 
-      <h1 className="mt-6 text-3xl font-bold text-zinc-900">Pedidos</h1>
-      <p className="mt-1 text-zinc-500">
+      <h1 className="mt-6 font-display text-3xl font-semibold text-ink">
+        Pedidos
+      </h1>
+      <p className="mt-1 text-muted">
         Gerencie o fluxo de produção: pago → em produção → pronto → entregue
       </p>
 
@@ -32,12 +34,12 @@ export default async function AdminOrdersPage() {
         {orders.map((order) => (
           <article
             key={order.id}
-            className="rounded-2xl border border-zinc-200 bg-white p-5"
+            className="rounded-2xl border border-rule bg-paper-2 p-5"
           >
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <div className="flex items-center gap-3">
-                  <h2 className="text-lg font-bold text-zinc-900">
+                  <h2 className="text-lg font-bold text-ink">
                     #{String(order.code).padStart(3, "0")}
                   </h2>
                   <span
@@ -46,11 +48,11 @@ export default async function AdminOrdersPage() {
                     {ORDER_STATUS_LABELS[order.status]}
                   </span>
                 </div>
-                <p className="mt-1 text-sm text-zinc-600">
+                <p className="mt-1 text-sm text-muted">
                   {order.customer.name} · {order.customer.email}
                   {order.customer.phone ? ` · ${order.customer.phone}` : ""}
                 </p>
-                <p className="text-xs text-zinc-400">
+                <p className="text-xs text-faint">
                   {order.createdAt.toLocaleString("pt-BR")} ·{" "}
                   {order.street}, {order.number} — {order.neighborhood},{" "}
                   {order.city}/{order.state}
@@ -58,33 +60,35 @@ export default async function AdminOrdersPage() {
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-xl font-extrabold text-zinc-900">
+                <p className="text-xl font-extrabold tabular-nums text-ink">
                   {formatBRL(order.totalCents)}
                 </p>
-                <p className="text-xs text-zinc-400">
+                <p className="text-xs text-faint">
                   {order.paymentMethod} ·{" "}
                   {order.paymentId ? order.paymentId.slice(0, 14) : "sem pagamento"}
                 </p>
               </div>
             </div>
 
-            <ul className="mt-3 space-y-1 border-t border-zinc-100 pt-3 text-sm text-zinc-600">
+            <ul className="mt-3 space-y-1 border-t border-rule pt-3 text-sm text-muted">
               {order.items.map((item) => (
                 <li key={item.id} className="flex justify-between">
                   <span>
                     {item.quantity}× {item.productName}
                   </span>
-                  <span>{formatBRL(item.unitPriceCents * item.quantity)}</span>
+                  <span className="tabular-nums text-ink">
+                    {formatBRL(item.unitPriceCents * item.quantity)}
+                  </span>
                 </li>
               ))}
             </ul>
 
             {order.events.length > 0 && (
-              <div className="mt-3 border-t border-zinc-100 pt-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
+              <div className="mt-3 border-t border-rule pt-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-faint">
                   Histórico recente
                 </p>
-                <ul className="mt-1 space-y-0.5 text-xs text-zinc-500">
+                <ul className="mt-1 space-y-0.5 text-xs text-muted">
                   {order.events.map((event) => (
                     <li key={event.id}>
                       {ORDER_STATUS_LABELS[event.toStatus]}
@@ -109,7 +113,7 @@ export default async function AdminOrdersPage() {
         ))}
 
         {orders.length === 0 && (
-          <p className="rounded-2xl border border-dashed border-zinc-300 p-10 text-center text-zinc-500">
+          <p className="rounded-2xl border border-dashed border-rule p-10 text-center text-muted">
             Nenhum pedido registrado ainda.
           </p>
         )}

@@ -42,10 +42,10 @@ export default async function OrderPage({
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-sm text-zinc-500">Pedido</p>
-          <h1 className="text-3xl font-bold text-zinc-900">
+          <p className="text-sm text-muted">Pedido</p>
+          <h1 className="font-display text-3xl font-semibold text-ink">
             #{String(order.code).padStart(3, "0")}
           </h1>
         </div>
@@ -60,11 +60,10 @@ export default async function OrderPage({
       {order.status === "PENDING_PAYMENT" && (
         <section className="mt-8 rounded-2xl border border-amber-200 bg-amber-50 p-6">
           <h2 className="flex items-center gap-2 font-bold text-amber-900">
-            <span aria-hidden>💳</span> Pagamento pendente
+            Pagamento pendente
           </h2>
           <p className="mt-1 text-sm text-amber-800">
-            {paymentInstructions ??
-              "Aguardando confirmação do pagamento."}
+            {paymentInstructions ?? "Aguardando confirmação do pagamento."}
           </p>
 
           {pixCode && (
@@ -73,7 +72,7 @@ export default async function OrderPage({
                 Código Pix (copia e cola)
               </p>
               <div className="mt-2 flex items-center gap-2">
-                <code className="flex-1 truncate rounded-xl bg-white px-3 py-2.5 text-xs text-zinc-700">
+                <code className="flex-1 truncate rounded-xl bg-paper px-3 py-2.5 font-mono text-xs text-ink">
                   {pixCode}
                 </code>
                 <CopyButton text={pixCode} />
@@ -88,43 +87,49 @@ export default async function OrderPage({
       )}
 
       {/* Itens */}
-      <section className="mt-8 rounded-2xl border border-zinc-200 bg-white p-6">
-        <h2 className="font-bold text-zinc-900">Itens do pedido</h2>
+      <section className="mt-8 rounded-2xl border border-rule bg-paper-2 p-6">
+        <h2 className="font-bold text-ink">Itens do pedido</h2>
         <ul className="mt-4 space-y-3">
           {order.items.map((item) => (
             <li
               key={item.id}
               className="flex items-center justify-between text-sm"
             >
-              <span className="text-zinc-700">
+              <span className="text-muted">
                 {item.quantity}× {item.productName}
               </span>
-              <span className="font-medium text-zinc-900">
+              <span className="font-medium tabular-nums text-ink">
                 {formatBRL(item.unitPriceCents * item.quantity)}
               </span>
             </li>
           ))}
         </ul>
-        <dl className="mt-4 space-y-1.5 border-t border-zinc-200 pt-4 text-sm">
+        <dl className="mt-4 space-y-1.5 border-t border-rule pt-4 text-sm">
           <div className="flex justify-between">
-            <dt className="text-zinc-500">Subtotal</dt>
-            <dd>{formatBRL(order.subtotalCents)}</dd>
+            <dt className="text-muted">Subtotal</dt>
+            <dd className="tabular-nums text-ink">
+              {formatBRL(order.subtotalCents)}
+            </dd>
           </div>
           <div className="flex justify-between">
-            <dt className="text-zinc-500">Entrega</dt>
-            <dd>{formatBRL(order.deliveryFeeCents)}</dd>
+            <dt className="text-muted">Entrega</dt>
+            <dd className="tabular-nums text-ink">
+              {formatBRL(order.deliveryFeeCents)}
+            </dd>
           </div>
           <div className="flex justify-between text-base font-bold">
-            <dt>Total</dt>
-            <dd>{formatBRL(order.totalCents)}</dd>
+            <dt className="text-ink">Total</dt>
+            <dd className="tabular-nums text-ink">
+              {formatBRL(order.totalCents)}
+            </dd>
           </div>
         </dl>
       </section>
 
       {/* Entrega */}
-      <section className="mt-6 rounded-2xl border border-zinc-200 bg-white p-6 text-sm">
-        <h2 className="font-bold text-zinc-900">Entrega</h2>
-        <p className="mt-2 text-zinc-600">
+      <section className="mt-6 rounded-2xl border border-rule bg-paper-2 p-6 text-sm">
+        <h2 className="font-bold text-ink">Entrega</h2>
+        <p className="mt-2 leading-relaxed text-muted">
           {order.street}, {order.number}
           {order.complement ? ` — ${order.complement}` : ""}
           <br />
@@ -132,8 +137,8 @@ export default async function OrderPage({
           {order.zip}
         </p>
         {order.notes && (
-          <p className="mt-3 rounded-xl bg-zinc-50 p-3 text-zinc-600">
-            <span className="font-semibold text-zinc-800">Observações:</span>{" "}
+          <p className="mt-3 rounded-xl bg-paper-3 p-3 text-muted">
+            <span className="font-semibold text-ink">Observações:</span>{" "}
             {order.notes}
           </p>
         )}
@@ -141,17 +146,20 @@ export default async function OrderPage({
 
       {/* Timeline de produção */}
       {order.events.length > 0 && (
-        <section className="mt-6 rounded-2xl border border-zinc-200 bg-white p-6">
-          <h2 className="font-bold text-zinc-900">Acompanhamento</h2>
+        <section className="mt-6 rounded-2xl border border-rule bg-paper-2 p-6">
+          <h2 className="font-bold text-ink">Acompanhamento</h2>
           <ol className="mt-4 space-y-3">
             {order.events.map((event) => (
               <li key={event.id} className="flex gap-3 text-sm">
-                <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-rose-500" />
+                <span
+                  className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-accent"
+                  aria-hidden
+                />
                 <div>
-                  <p className="font-medium text-zinc-800">
+                  <p className="font-medium text-ink">
                     {ORDER_STATUS_LABELS[event.toStatus]}
                   </p>
-                  <p className="text-xs text-zinc-400">
+                  <p className="text-xs text-faint">
                     {event.createdAt.toLocaleString("pt-BR")}
                     {event.note ? ` · ${event.note}` : ""}
                   </p>
@@ -162,9 +170,12 @@ export default async function OrderPage({
         </section>
       )}
 
-      <p className="mt-8 text-center text-sm text-zinc-500">
+      <p className="mt-8 text-center text-sm text-muted">
         Guarde o número do pedido para acompanhar.{" "}
-        <Link href="/" className="font-medium text-rose-700 hover:underline">
+        <Link
+          href="/"
+          className="font-medium text-accent underline underline-offset-2 transition hover:text-accent-deep"
+        >
           Voltar à vitrine
         </Link>
       </p>

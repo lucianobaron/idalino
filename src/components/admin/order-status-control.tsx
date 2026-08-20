@@ -45,12 +45,12 @@ export function OrderStatusControl({ orderId, currentStatus }: Props) {
   }
 
   if (allowed.length === 0) {
-    return <p className="text-xs text-zinc-400">Status final.</p>;
+    return <p className="text-xs text-faint">Status final.</p>;
   }
 
   return (
-    <div className="mt-3 rounded-xl bg-zinc-50 p-3">
-      <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
+    <div className="mt-3 rounded-xl bg-paper-3 p-3">
+      <p className="text-xs font-semibold uppercase tracking-wide text-faint">
         Atualizar produção
       </p>
       <div className="mt-2 flex flex-wrap gap-2">
@@ -60,9 +60,9 @@ export function OrderStatusControl({ orderId, currentStatus }: Props) {
             type="button"
             onClick={() => changeStatus(to)}
             disabled={busy !== null}
-            className="rounded-full border border-zinc-300 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 transition hover:border-rose-400 hover:text-rose-700 disabled:opacity-50"
+            className="rounded-full border border-rule bg-paper-2 px-3 py-1.5 text-xs font-semibold text-ink transition hover:border-accent hover:text-accent disabled:opacity-50"
           >
-            {busy === to ? "..." : ORDER_STATUS_LABELS[to]}
+            {busy === to ? "…" : ORDER_STATUS_LABELS[to]}
           </button>
         ))}
       </div>
@@ -70,8 +70,8 @@ export function OrderStatusControl({ orderId, currentStatus }: Props) {
         type="text"
         value={note}
         onChange={(e) => setNote(e.target.value)}
-        placeholder="Anotação (opcional): ex. 'pronta às 15h'"
-        className="mt-2 w-full rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs outline-none focus:border-rose-400"
+        placeholder="Anotação (opcional): ex. “pronta às 15h”"
+        className="mt-2 w-full rounded-lg border border-rule bg-paper-2 px-3 py-1.5 text-xs text-ink outline-none transition placeholder:text-faint focus:border-accent"
       />
       {error && <p className="mt-2 text-xs font-medium text-red-600">{error}</p>}
     </div>

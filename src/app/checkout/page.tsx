@@ -18,13 +18,13 @@ export default function CheckoutPage() {
   if (items.length === 0) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-20 text-center">
-        <h1 className="text-2xl font-bold text-zinc-900">
+        <h1 className="font-display text-3xl font-semibold text-ink">
           Nada para finalizar
         </h1>
-        <p className="mt-2 text-zinc-500">Seu carrinho está vazio.</p>
+        <p className="mt-2 text-muted">Seu carrinho está vazio.</p>
         <Link
           href="/#tortas"
-          className="mt-6 inline-block rounded-full bg-rose-600 px-6 py-3 font-semibold text-white hover:bg-rose-700"
+          className="mt-6 inline-block rounded-full bg-accent px-6 py-3 font-semibold text-white transition hover:bg-accent-deep"
         >
           Escolher tortas
         </Link>
@@ -75,85 +75,114 @@ export default function CheckoutPage() {
   }
 
   const inputClass =
-    "w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-rose-500 focus:ring-2 focus:ring-rose-200";
+    "w-full rounded-xl border border-rule bg-paper px-3 py-2 text-sm text-ink outline-none transition placeholder:text-faint focus:border-accent focus:ring-2 focus:ring-accent/25";
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10">
-      <h1 className="text-3xl font-bold text-zinc-900">Finalizar encomenda</h1>
+      <h1 className="font-display text-3xl font-semibold text-ink">
+        Finalizar encomenda
+      </h1>
 
-      <form onSubmit={handleSubmit} className="mt-8 grid gap-8 lg:grid-cols-[1fr_340px]">
+      <form
+        onSubmit={handleSubmit}
+        className="mt-8 grid gap-8 lg:grid-cols-[1fr_340px]"
+      >
         <div className="space-y-8">
-          <section className="rounded-2xl border border-zinc-200 bg-white p-6">
-            <h2 className="font-bold text-zinc-900">1. Seus dados</h2>
+          <section className="rounded-2xl border border-rule bg-paper-2 p-6">
+            <h2 className="font-bold text-ink">1. Seus dados</h2>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <label className="block">
-                <span className="mb-1 block text-sm font-medium text-zinc-600">
+                <span className="mb-1 block text-sm font-medium text-muted">
                   Nome completo *
                 </span>
                 <input name="name" required className={inputClass} />
               </label>
               <label className="block">
-                <span className="mb-1 block text-sm font-medium text-zinc-600">
+                <span className="mb-1 block text-sm font-medium text-muted">
                   E-mail *
                 </span>
-                <input name="email" type="email" required className={inputClass} />
+                <input
+                  name="email"
+                  type="email"
+                  required
+                  className={inputClass}
+                />
               </label>
               <label className="block sm:col-span-2">
-                <span className="mb-1 block text-sm font-medium text-zinc-600">
+                <span className="mb-1 block text-sm font-medium text-muted">
                   Telefone / WhatsApp
                 </span>
-                <input name="phone" className={inputClass} placeholder="(11) 99999-9999" />
+                <input
+                  name="phone"
+                  className={inputClass}
+                  placeholder="(11) 99999-9999"
+                />
               </label>
             </div>
           </section>
 
-          <section className="rounded-2xl border border-zinc-200 bg-white p-6">
-            <h2 className="font-bold text-zinc-900">2. Endereço de entrega</h2>
+          <section className="rounded-2xl border border-rule bg-paper-2 p-6">
+            <h2 className="font-bold text-ink">2. Endereço de entrega</h2>
             <div className="mt-4 grid gap-4 sm:grid-cols-6">
               <label className="block sm:col-span-4">
-                <span className="mb-1 block text-sm font-medium text-zinc-600">
+                <span className="mb-1 block text-sm font-medium text-muted">
                   Rua *
                 </span>
                 <input name="street" required className={inputClass} />
               </label>
               <label className="block sm:col-span-2">
-                <span className="mb-1 block text-sm font-medium text-zinc-600">
+                <span className="mb-1 block text-sm font-medium text-muted">
                   Número *
                 </span>
                 <input name="number" required className={inputClass} />
               </label>
               <label className="block sm:col-span-2">
-                <span className="mb-1 block text-sm font-medium text-zinc-600">
+                <span className="mb-1 block text-sm font-medium text-muted">
                   Complemento
                 </span>
-                <input name="complement" className={inputClass} placeholder="Apto, bloco..." />
+                <input
+                  name="complement"
+                  className={inputClass}
+                  placeholder="Apto, bloco…"
+                />
               </label>
               <label className="block sm:col-span-2">
-                <span className="mb-1 block text-sm font-medium text-zinc-600">
+                <span className="mb-1 block text-sm font-medium text-muted">
                   Bairro *
                 </span>
                 <input name="neighborhood" required className={inputClass} />
               </label>
               <label className="block sm:col-span-2">
-                <span className="mb-1 block text-sm font-medium text-zinc-600">
+                <span className="mb-1 block text-sm font-medium text-muted">
                   Cidade *
                 </span>
                 <input name="city" required className={inputClass} />
               </label>
               <label className="block">
-                <span className="mb-1 block text-sm font-medium text-zinc-600">
+                <span className="mb-1 block text-sm font-medium text-muted">
                   UF *
                 </span>
-                <input name="state" required maxLength={2} className={inputClass} placeholder="SP" />
+                <input
+                  name="state"
+                  required
+                  maxLength={2}
+                  className={inputClass}
+                  placeholder="SP"
+                />
               </label>
               <label className="block">
-                <span className="mb-1 block text-sm font-medium text-zinc-600">
+                <span className="mb-1 block text-sm font-medium text-muted">
                   CEP *
                 </span>
-                <input name="zip" required className={inputClass} placeholder="00000-000" />
+                <input
+                  name="zip"
+                  required
+                  className={inputClass}
+                  placeholder="00000-000"
+                />
               </label>
               <label className="block sm:col-span-6">
-                <span className="mb-1 block text-sm font-medium text-zinc-600">
+                <span className="mb-1 block text-sm font-medium text-muted">
                   Observações (recheio extra, data especial, etc.)
                 </span>
                 <textarea name="notes" rows={3} className={inputClass} />
@@ -162,38 +191,42 @@ export default function CheckoutPage() {
           </section>
         </div>
 
-        <aside className="h-fit rounded-2xl border border-zinc-200 bg-white p-6">
-          <h2 className="font-bold text-zinc-900">Seu pedido</h2>
+        <aside className="h-fit rounded-2xl border border-rule bg-paper-2 p-6">
+          <h2 className="font-bold text-ink">Seu pedido</h2>
           <ul className="mt-4 space-y-2 text-sm">
             {items.map((item) => (
               <li key={item.productId} className="flex justify-between gap-2">
-                <span className="text-zinc-600">
+                <span className="text-muted">
                   {item.quantity}× {item.name}
                 </span>
-                <span className="font-medium">
+                <span className="font-medium tabular-nums text-ink">
                   {formatBRL(item.priceCents * item.quantity)}
                 </span>
               </li>
             ))}
           </ul>
-          <dl className="mt-4 space-y-2 border-t border-zinc-200 pt-4 text-sm">
+          <dl className="mt-4 space-y-2 border-t border-rule pt-4 text-sm">
             <div className="flex justify-between">
-              <dt className="text-zinc-500">Subtotal</dt>
-              <dd className="font-medium">{formatBRL(totalCents)}</dd>
+              <dt className="text-muted">Subtotal</dt>
+              <dd className="font-medium tabular-nums text-ink">
+                {formatBRL(totalCents)}
+              </dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-zinc-500">Entrega</dt>
-              <dd className="font-medium">{formatBRL(DELIVERY_FEE_CENTS)}</dd>
+              <dt className="text-muted">Entrega</dt>
+              <dd className="font-medium tabular-nums text-ink">
+                {formatBRL(DELIVERY_FEE_CENTS)}
+              </dd>
             </div>
             <div className="flex justify-between text-base font-bold">
-              <dt>Total</dt>
-              <dd>{formatBRL(grandTotal)}</dd>
+              <dt className="text-ink">Total</dt>
+              <dd className="tabular-nums text-ink">{formatBRL(grandTotal)}</dd>
             </div>
           </dl>
 
-          <p className="mt-4 rounded-xl bg-amber-50 p-3 text-xs leading-relaxed text-amber-800">
-            💡 Pagamento simulado (mock) por enquanto. Nenhuma cobrança real
-            será feita nesta versão de demonstração.
+          <p className="mt-4 rounded-xl bg-paper-3 p-3 text-xs leading-relaxed text-muted">
+            Pagamento simulado (mock) por enquanto. Nenhuma cobrança real será
+            feita nesta versão de demonstração.
           </p>
 
           {error && (
@@ -205,9 +238,9 @@ export default function CheckoutPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="mt-6 w-full rounded-full bg-rose-600 py-3 font-semibold text-white transition hover:bg-rose-700 disabled:opacity-60"
+            className="mt-6 w-full rounded-full bg-accent py-3 font-semibold text-white transition hover:bg-accent-deep disabled:opacity-60"
           >
-            {submitting ? "Enviando..." : "Confirmar encomenda"}
+            {submitting ? "Enviando…" : "Confirmar encomenda"}
           </button>
         </aside>
       </form>
