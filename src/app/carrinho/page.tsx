@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useCart } from "@/components/cart/cart-context";
+import { TortaImage } from "@/components/torta-image";
 import { formatBRL } from "@/lib/format";
-import { DELIVERY_FEE_CENTS } from "@/lib/constants";
 
 export default function CartPage() {
   const { items, totalCents, setQuantity, removeItem } = useCart();
@@ -40,9 +40,16 @@ export default function CartPage() {
               key={item.productId}
               className="flex items-center gap-4 rounded-2xl border border-rule bg-paper-2 p-4"
             >
-              <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-paper-3 text-4xl">
-                {item.emoji}
-              </span>
+              <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-rule bg-paper-3">
+                <TortaImage
+                  src={item.imageUrl ?? null}
+                  alt={item.name}
+                  emoji={item.emoji}
+                  sizes="64px"
+                  className="object-cover"
+                  emojiClassName="text-4xl"
+                />
+              </div>
               <div className="min-w-0 flex-1">
                 <Link
                   href={`/tortas/${item.slug}`}
@@ -102,16 +109,20 @@ export default function CartPage() {
             </div>
             <div className="flex justify-between">
               <dt className="text-muted">Entrega</dt>
-              <dd className="font-medium tabular-nums">
-                {formatBRL(DELIVERY_FEE_CENTS)}
+              <dd className="font-medium tabular-nums text-faint">
+                a calcular no checkout
               </dd>
             </div>
             <div className="flex justify-between border-t border-rule pt-3 text-base font-bold">
-              <dt className="text-ink">Total</dt>
+              <dt className="text-ink">Total (sem entrega)</dt>
               <dd className="tabular-nums text-ink">
-                {formatBRL(totalCents + DELIVERY_FEE_CENTS)}
+                {formatBRL(totalCents)}
               </dd>
             </div>
+            <p className="mt-2 text-xs leading-relaxed text-faint">
+              A taxa de entrega é calculada pela distância do seu endereço até a
+              loja — ou pode ser retirada na loja, sem taxa.
+            </p>
           </dl>
           <Link
             href="/checkout"

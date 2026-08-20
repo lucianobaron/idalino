@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { formatBRL } from "@/lib/format";
+import { formatBRL, formatKm } from "@/lib/format";
 import { getPaymentProvider } from "@/lib/payments";
 import {
   ORDER_STATUS_LABELS,
@@ -29,6 +29,18 @@ export default async function OrderPage({
   });
 
   if (!order) notFound();
+
+  const settings = await prisma.storeSettings.findUnique({
+    where: { id: "store" },
+  });
+  const storeAddress =
+    settings && settings.street
+      ? `${settings.street}${settings.number ? `, ${settings.number}` : ""}${
+          settings.neighborhood ? ` — ${settings.neighborhood}` : ""
+        }${settings.city ? `, ${settings.city}` : ""}${
+          settings.state ? `/${settings.state}` : ""
+        }`
+      : null;
 
   const provider = getPaymentProvider();
   const paymentInfo =
@@ -126,16 +138,37 @@ export default async function OrderPage({
         </dl>
       </section>
 
-      {/* Entrega */}
+      {/* Entrega / retirada */}
       <section className="mt-6 rounded-2xl border border-rule bg-paper-2 p-6 text-sm">
         <h2 className="font-bold text-ink">Entrega</h2>
-        <p className="mt-2 leading-relaxed text-muted">
-          {order.street}, {order.number}
-          {order.complement ? ` — ${order.complement}` : ""}
-          <br />
-          {order.neighborhood}, {order.city} — {order.state} · CEP{" "}
-          {order.zip}
-        </p>
+        {order.deliveryType === "PICKUP" ? (
+          <div className="mt-2 leading-relaxed text-muted">
+            <p className="font-medium text-ink">Retirada na loja</p>
+            {storeAddress ? (
+              <p className="mt-1">{storeAddress}</p>
+            ) : (
+              <p className="mt-1">
+                Você receberá as instruções de retirada em breve.
+              </p>
+            )}
+            <p className="mt-1 text-xs text-faint">Sem taxa de entrega.</p>
+          </div>
+        ) : (
+          <>
+            <p className="mt-2 leading-relaxed text-muted">
+              {order.street}, {order.number}
+              {order.complement ? ` — ${order.complement}` : ""}
+              <br />
+              {order.neighborhood}, {order.city} — {order.state} · CEP{" "}
+              {order.zip}
+            </p>
+            {order.deliveryDistanceKm !== null && (
+              <p className="mt-2 text-xs text-faint">
+                Distância estimada: ≈ {formatKm(order.deliveryDistanceKm)}
+              </p>
+            )}
+          </>
+        )}
         {order.notes && (
           <p className="mt-3 rounded-xl bg-paper-3 p-3 text-muted">
             <span className="font-semibold text-ink">Observações:</span>{" "}

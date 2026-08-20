@@ -1,19 +1,36 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useCart } from "@/components/cart/cart-context";
-import { formatBRL } from "@/lib/format";
-import { DELIVERY_FEE_CENTS } from "@/lib/constants";
+import { formatBRL, formatKm } from "@/lib/format";
+
+type DeliveryType = "DELIVERY" | "PICKUP";
+
+type QuoteState =
+  | { status: "idle" | "loading" }
+  | { status: "ok"; feeCents: number; distanceKm: number }
+  | { status: "error"; message: string };
 
 export default function CheckoutPage() {
   const router = useRouter();
   const { items, totalCents, clear } = useCart();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deliveryType, setDeliveryType] = useState<DeliveryType>("DELIVERY");
+  const [quote, setQuote] = useState<QuoteState>({ status: "idle" });
+  const quoteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const grandTotal = totalCents + DELIVERY_FEE_CENTS;
+  useEffect(() => {
+    return () => {
+      if (quoteTimer.current) clearTimeout(quoteTimer.current);
+    };
+  }, []);
+
+  const deliveryFeeCents =
+    deliveryType === "PICKUP" ? 0 : quote.status === "ok" ? quote.feeCents : null;
+  const grandTotal = totalCents + (deliveryFeeCents ?? 0);
 
   if (items.length === 0) {
     return (
@@ -32,31 +49,75 @@ export default function CheckoutPage() {
     );
   }
 
+  function handleCepChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const cep = e.target.value;
+    if (quoteTimer.current) clearTimeout(quoteTimer.current);
+
+    const digits = cep.replace(/\D/g, "");
+    if (digits.length < 8) {
+      setQuote({ status: "idle" });
+      return;
+    }
+
+    setQuote({ status: "loading" });
+    quoteTimer.current = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `/api/delivery/quote?cep=${encodeURIComponent(cep)}`,
+        );
+        const data = await res.json().catch(() => null);
+        if (!res.ok) {
+          setQuote({
+            status: "error",
+            message:
+              data?.error ?? "Não foi possível calcular a entrega.",
+          });
+          return;
+        }
+        setQuote({
+          status: "ok",
+          feeCents: data.feeCents,
+          distanceKm: data.distanceKm,
+        });
+      } catch {
+        setQuote({
+          status: "error",
+          message: "Não foi possível calcular a entrega.",
+        });
+      }
+    }, 500);
+  }
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSubmitting(true);
     setError(null);
 
     const form = new FormData(event.currentTarget);
+    const body: Record<string, unknown> = {
+      name: form.get("name"),
+      email: form.get("email"),
+      phone: form.get("phone"),
+      deliveryType,
+      notes: form.get("notes"),
+      items,
+    };
+
+    if (deliveryType === "DELIVERY") {
+      body.street = form.get("street");
+      body.number = form.get("number");
+      body.complement = form.get("complement");
+      body.neighborhood = form.get("neighborhood");
+      body.city = form.get("city");
+      body.state = form.get("state");
+      body.zip = form.get("zip");
+    }
 
     try {
       const res = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: form.get("name"),
-          email: form.get("email"),
-          phone: form.get("phone"),
-          street: form.get("street"),
-          number: form.get("number"),
-          complement: form.get("complement"),
-          neighborhood: form.get("neighborhood"),
-          city: form.get("city"),
-          state: form.get("state"),
-          zip: form.get("zip"),
-          notes: form.get("notes"),
-          items,
-        }),
+        body: JSON.stringify(body),
       });
 
       const data = await res.json();
@@ -122,72 +183,134 @@ export default function CheckoutPage() {
           </section>
 
           <section className="rounded-2xl border border-rule bg-paper-2 p-6">
-            <h2 className="font-bold text-ink">2. Endereço de entrega</h2>
-            <div className="mt-4 grid gap-4 sm:grid-cols-6">
-              <label className="block sm:col-span-4">
-                <span className="mb-1 block text-sm font-medium text-muted">
-                  Rua *
-                </span>
-                <input name="street" required className={inputClass} />
-              </label>
-              <label className="block sm:col-span-2">
-                <span className="mb-1 block text-sm font-medium text-muted">
-                  Número *
-                </span>
-                <input name="number" required className={inputClass} />
-              </label>
-              <label className="block sm:col-span-2">
-                <span className="mb-1 block text-sm font-medium text-muted">
-                  Complemento
-                </span>
+            <h2 className="font-bold text-ink">2. Como receber</h2>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <label
+                className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition ${
+                  deliveryType === "PICKUP"
+                    ? "border-accent bg-accent/5"
+                    : "border-rule bg-paper hover:bg-paper-3"
+                }`}
+              >
                 <input
-                  name="complement"
-                  className={inputClass}
-                  placeholder="Apto, bloco…"
+                  type="radio"
+                  name="deliveryType"
+                  value="PICKUP"
+                  checked={deliveryType === "PICKUP"}
+                  onChange={() => setDeliveryType("PICKUP")}
+                  className="mt-1 h-4 w-4 accent-[var(--color-accent)]"
                 />
-              </label>
-              <label className="block sm:col-span-2">
-                <span className="mb-1 block text-sm font-medium text-muted">
-                  Bairro *
+                <span>
+                  <span className="block font-semibold text-ink">
+                    Retirar na loja
+                  </span>
+                  <span className="block text-sm text-muted">
+                    Sem taxa de entrega
+                  </span>
                 </span>
-                <input name="neighborhood" required className={inputClass} />
               </label>
-              <label className="block sm:col-span-2">
-                <span className="mb-1 block text-sm font-medium text-muted">
-                  Cidade *
-                </span>
-                <input name="city" required className={inputClass} />
-              </label>
-              <label className="block">
-                <span className="mb-1 block text-sm font-medium text-muted">
-                  UF *
-                </span>
+
+              <label
+                className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition ${
+                  deliveryType === "DELIVERY"
+                    ? "border-accent bg-accent/5"
+                    : "border-rule bg-paper hover:bg-paper-3"
+                }`}
+              >
                 <input
-                  name="state"
-                  required
-                  maxLength={2}
-                  className={inputClass}
-                  placeholder="SP"
+                  type="radio"
+                  name="deliveryType"
+                  value="DELIVERY"
+                  checked={deliveryType === "DELIVERY"}
+                  onChange={() => setDeliveryType("DELIVERY")}
+                  className="mt-1 h-4 w-4 accent-[var(--color-accent)]"
                 />
-              </label>
-              <label className="block">
-                <span className="mb-1 block text-sm font-medium text-muted">
-                  CEP *
+                <span>
+                  <span className="block font-semibold text-ink">
+                    Receber em casa
+                  </span>
+                  <span className="block text-sm text-muted">
+                    Taxa calculada pela distância até a loja
+                  </span>
                 </span>
-                <input
-                  name="zip"
-                  required
-                  className={inputClass}
-                  placeholder="00000-000"
-                />
-              </label>
-              <label className="block sm:col-span-6">
-                <span className="mb-1 block text-sm font-medium text-muted">
-                  Observações (recheio extra, data especial, etc.)
-                </span>
-                <textarea name="notes" rows={3} className={inputClass} />
               </label>
             </div>
+
+            {deliveryType === "DELIVERY" && (
+              <div className="mt-5 border-t border-rule pt-5">
+                <h3 className="font-bold text-ink">Endereço de entrega</h3>
+                <div className="mt-4 grid gap-4 sm:grid-cols-6">
+                  <label className="block sm:col-span-4">
+                    <span className="mb-1 block text-sm font-medium text-muted">
+                      Rua *
+                    </span>
+                    <input name="street" required className={inputClass} />
+                  </label>
+                  <label className="block sm:col-span-2">
+                    <span className="mb-1 block text-sm font-medium text-muted">
+                      Número *
+                    </span>
+                    <input name="number" required className={inputClass} />
+                  </label>
+                  <label className="block sm:col-span-2">
+                    <span className="mb-1 block text-sm font-medium text-muted">
+                      Complemento
+                    </span>
+                    <input
+                      name="complement"
+                      className={inputClass}
+                      placeholder="Apto, bloco…"
+                    />
+                  </label>
+                  <label className="block sm:col-span-2">
+                    <span className="mb-1 block text-sm font-medium text-muted">
+                      Bairro *
+                    </span>
+                    <input
+                      name="neighborhood"
+                      required
+                      className={inputClass}
+                    />
+                  </label>
+                  <label className="block sm:col-span-2">
+                    <span className="mb-1 block text-sm font-medium text-muted">
+                      Cidade *
+                    </span>
+                    <input name="city" required className={inputClass} />
+                  </label>
+                  <label className="block">
+                    <span className="mb-1 block text-sm font-medium text-muted">
+                      UF *
+                    </span>
+                    <input
+                      name="state"
+                      required
+                      maxLength={2}
+                      className={inputClass}
+                      placeholder="SP"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="mb-1 block text-sm font-medium text-muted">
+                      CEP *
+                    </span>
+                    <input
+                      name="zip"
+                      required
+                      onChange={handleCepChange}
+                      className={inputClass}
+                      placeholder="00000-000"
+                    />
+                  </label>
+                  <label className="block sm:col-span-6">
+                    <span className="mb-1 block text-sm font-medium text-muted">
+                      Observações (recheio extra, data especial, etc.)
+                    </span>
+                    <textarea name="notes" rows={3} className={inputClass} />
+                  </label>
+                </div>
+              </div>
+            )}
           </section>
         </div>
 
@@ -212,15 +335,36 @@ export default function CheckoutPage() {
                 {formatBRL(totalCents)}
               </dd>
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between gap-2">
               <dt className="text-muted">Entrega</dt>
-              <dd className="font-medium tabular-nums text-ink">
-                {formatBRL(DELIVERY_FEE_CENTS)}
+              <dd className="text-right font-medium tabular-nums text-ink">
+                {deliveryType === "PICKUP"
+                  ? "Grátis"
+                  : quote.status === "ok"
+                    ? (
+                        <>
+                          {formatBRL(quote.feeCents)}
+                          <span className="block text-xs font-normal text-faint">
+                            ≈ {formatKm(quote.distanceKm)} da loja
+                          </span>
+                        </>
+                      )
+                    : quote.status === "loading"
+                      ? "Calculando…"
+                      : quote.status === "error"
+                        ? (
+                            <span className="text-red-700">
+                              {quote.message}
+                            </span>
+                          )
+                        : "Informe o CEP"}
               </dd>
             </div>
             <div className="flex justify-between text-base font-bold">
               <dt className="text-ink">Total</dt>
-              <dd className="tabular-nums text-ink">{formatBRL(grandTotal)}</dd>
+              <dd className="tabular-nums text-ink">
+                {formatBRL(grandTotal)}
+              </dd>
             </div>
           </dl>
 
