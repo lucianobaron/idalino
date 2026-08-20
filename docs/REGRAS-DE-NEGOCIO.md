@@ -95,16 +95,28 @@ primeiro cadastro — comportamento atual do código).
 ### BR-009 — Cálculo do total
 - `subtotalCents` = Σ (preço do produto no banco × quantidade), por item.
 - `totalCents` = `subtotalCents` + `deliveryFeeCents`.
+- `deliveryFeeCents` = preço da faixa de distância (BR-010) quando a entrega é
+  escolhida, ou `0` quando a retirada na loja é escolhida (BR-028).
 - O cliente pode conferir no checkout (resumo) e na página do pedido; o valor
   oficial é sempre o gravado no pedido pelo servidor.
 - **Status:** vigente · **Fonte:** `src/app/api/orders/route.ts`, exibição em
   `src/app/checkout/page.tsx` e `src/app/pedido/[id]/page.tsx`.
 
-### BR-010 — Taxa de entrega
-Taxa única global de entrega, em centavos, definida por `DELIVERY_FEE_CENTS` no
-ambiente (default `1500` = R$ 15,00; valor inválido/negativo cai para o default).
-Não há taxa por região, peso ou valor mínimo de pedido (hoje).
-- **Status:** vigente · **Fonte:** `src/lib/constants.ts`.
+### BR-010 — Taxa de entrega por faixas de distância
+A taxa de entrega **não é mais uma constante global**: o preço é definido por
+**faixas de distância** (`DeliveryFeeRange`), configuradas no painel admin em
+`/admin/entregas`. Cada faixa tem `minKm` (inclusivo), `maxKm` (exclusivo;
+**nulo = faixa aberta**, vale para toda distância a partir de `minKm`) e
+`priceCents` (inteiro em centavos, DEC-01). Regras de validação:
+- No máximo **uma** faixa aberta, e ela deve ser a última (maior `minKm`).
+- Faixas não podem se sobrepor (distâncias iguais a um limite entram na faixa
+  seguinte: `min <= d < max`).
+- Sem faixa que cubra a distância (incluindo buracos entre faixas), a entrega
+  **não é oferecida** para aquele CEP (BR-029).
+- **Status:** vigente (substitui a antiga taxa única `DELIVERY_FEE_CENTS`) ·
+  **Fonte:** `prisma/schema.prisma` (modelo `DeliveryFeeRange`),
+  `src/lib/delivery-fees-admin.ts`, `src/app/api/admin/delivery-fees/route.ts`,
+  `src/lib/delivery.ts`.
 
 ---
 
@@ -112,10 +124,13 @@ Não há taxa por região, peso ou valor mínimo de pedido (hoje).
 
 ### BR-011 — Validação dos dados do cliente/entrega
 Campos obrigatórios na finalização (validados com Zod no servidor): nome (mín. 2),
-e-mail válido, rua (mín. 2), número (mín. 1), bairro (mín. 2), cidade (mín. 2), UF
-(exatamente 2 caracteres), CEP (mín. 8). Opcionais: telefone, complemento e
-observações. Mensagens de erro em pt-BR.
-- **Status:** vigente · **Fonte:** `src/app/api/orders/route.ts` (schema Zod `orderSchema`).
+e-mail válido. O **endereço de entrega** (rua mín. 2, número mín. 1, bairro mín. 2,
+cidade mín. 2, UF exatamente 2, CEP mín. 8) é obrigatório **somente quando a
+entrega é escolhida** (BR-028); na retirada na loja o endereço é ignorado e
+gravado como nulo. Opcionais: telefone, complemento e observações. Mensagens de
+erro em pt-BR.
+- **Status:** vigente (ajustada para retirada × entrega) · **Fonte:**
+  `src/app/api/orders/route.ts` (schema Zod `orderSchema` + `superRefine`).
 
 ### BR-012 — Limites de itens
 - Carrinho deve ter no mínimo 1 item (pedido sem itens → `400` "Carrinho vazio.").
@@ -144,6 +159,65 @@ Todo pedido recebe `code` inteiro sequencial único (`autoincrement`), exibido c
 O `code` não é um número contábil: reinicia após `db:reset`.
 - **Status:** vigente · **Fonte:** `prisma/schema.prisma` (modelo `Order.code`),
   `src/app/api/orders/route.ts`, `src/app/pedido/[id]/page.tsx`.
+
+### BR-028 — Escolha no checkout: retirada na loja × entrega
+No checkout, o cliente escolhe entre **retirar na loja** (`PICKUP`) e **entrega**
+(`DELIVERY`, default). O pedido grava `Order.deliveryType`:
+- **PICKUP:** sem taxa de entrega (`deliveryFeeCents = 0`), endereço de entrega
+  não é exigido (gravado nulo) e a página do pedido exibe "Retirada na loja" com
+  o endereço da loja (ponto de saída, BR-030), quando preenchido.
+- **DELIVERY:** endereço obrigatório (BR-011), taxa calculada pela faixa de
+  distância (BR-010) e distância gravada como snapshot (`deliveryDistanceKm`).
+- **Status:** vigente · **Fonte:** `prisma/schema.prisma` (enum `DeliveryType`),
+  `src/app/api/orders/route.ts`, `src/app/checkout/page.tsx`,
+  `src/app/pedido/[id]/page.tsx`, `src/app/admin/pedidos/page.tsx`.
+
+### BR-029 — Cobertura da entrega (fora da faixa)
+A entrega só é oferecida para CEPs cuja distância até a loja se encaixe em alguma
+faixa cadastrada. Distâncias fora de toda faixa (abaixo da primeira, em buracos
+entre faixas ou além da última — salvo faixa aberta) são recusadas no checkout e
+na criação do pedido com a mensagem "Não realizamos entrega para este CEP." A
+retirada na loja continua disponível em qualquer caso. A prévia no checkout usa a
+rota `GET /api/delivery/quote?cep=...`; o valor oficial é sempre recalculado no
+servidor ao criar o pedido (DEC-06).
+- **Status:** vigente · **Fonte:** `src/lib/delivery.ts` (`quoteDelivery`),
+  `src/app/api/orders/route.ts`, `src/app/api/delivery/quote/route.ts`.
+
+### BR-030 — Ponto de saída da loja (origem do cálculo)
+O ponto de saída da loja é configurável no painel (`/admin/entregas` →
+"Ponto de saída da loja"): o CEP da loja é obrigatório (origem do cálculo de
+distância, coordenadas resolvidas no salvamento) e o endereço completo é opcional
+(exibição na retirada). Enquanto o CEP não for configurado, a entrega fica
+indisponível ("Entrega indisponível no momento.") e a retirada segue funcionando.
+- **Status:** vigente · **Fonte:** `prisma/schema.prisma` (modelo `StoreSettings`,
+  linha única `id = "store"`), `src/app/api/admin/delivery/settings/route.ts`,
+  `src/components/admin/store-settings-form.tsx`.
+
+### BR-031 — Distância calculada pelo CEP (snapshot no pedido)
+A distância é calculada no servidor entre as coordenadas do CEP da loja
+(StoreSettings) e as coordenadas do CEP de entrega (serviços gratuitos:
+AwesomeAPI CEP, com fallback Nominatim/OSM), em linha reta (haversine), e o
+resultado é gravado no pedido (`deliveryDistanceKm`) junto com a taxa cobrada
+(`deliveryFeeCents`) — alterações futuras de faixas ou do CEP da loja **não**
+afetam pedidos já criados (mesma filosofia do snapshot de itens, DEC-08). A
+distância é aproximada (linha reta × CEP, não rota real); o motor é isolado em
+`src/lib/delivery.ts` para trocar por um provedor preciso (ex.: Google Maps) em
+produção — ver decisão DEC-21. **CEPs que os serviços gratuitos não conseguem
+resolver são recusados como "CEP inválido"** (não é possível calcular a
+distância; ex.: 04000000 — ver INC-01 em `TECNICO.md`).
+- **Status:** vigente · **Fonte:** `src/lib/delivery.ts`, `prisma/schema.prisma`
+  (modelo `Order.deliveryDistanceKm`), `src/app/api/orders/route.ts`.
+
+### BR-033 — Carrinho é esvaziado ao concluir o pedido
+Ao concluir a encomenda (clique em **"Confirmar encomenda"** no checkout), com o
+pedido criado com sucesso (201 da API), o carrinho é **limpo no cliente**
+(`clear()`): a badge volta a 0, a página do carrinho fica vazia e os cards da
+vitrine voltam ao botão **"Adicionar"** (steppers de quantidade liberados —
+DEC-24). Se a criação falhar (validação, entrega indisponível, etc.), o carrinho
+é **preservado** para nova tentativa.
+- **Status:** vigente · **Fonte:** `src/app/checkout/page.tsx` (`handleSubmit` →
+  `clear()` + redirect para `/pedido/<id>`), `src/components/cart/cart-context.tsx`
+  (`clear`), `src/app/api/orders/route.ts` (resposta `201 { orderId }`).
 
 ---
 
@@ -199,18 +273,44 @@ o acesso é pelo link/URL gerado no checkout.
 ## 6. Administração
 
 ### BR-021 — Acesso ao painel exige sessão de admin
-O painel (`/admin` e `/admin/pedidos`) exige sessão válida; sem sessão, redireciona
-para `/admin/login`. A sessão é emitida com a senha única `ADMIN_PASSWORD` e dura 3
-dias (cookie assinado). A API de mudança de status responde `401` sem sessão.
+O painel (`/admin` e telas de gestão) exige sessão válida; sem sessão, redireciona
+para `/admin/login`. O login é feito com **e-mail + senha de um usuário admin**
+(BR-032); a sessão é um cookie assinado por HMAC com validade de 3 dias,
+vinculado ao usuário logado. A API responde `401` sem sessão.
 - **Status:** vigente · **Fonte:** `src/lib/auth.ts`, `src/lib/admin-guard.ts`,
-  `src/app/api/admin/login/route.ts`, `src/app/api/admin/orders/[id]/status/route.ts`.
-- **Atenção:** autenticação é nível dev — ver `DEC-03` e `TECNICO.md` §6.
+  `src/app/api/admin/login/route.ts`, `src/app/api/admin/session/route.ts`.
+- **Atenção:** autenticação é nível dev — ver `DEC-03`/`DEC-22` e `TECNICO.md` §6.
+
+### BR-032 — Usuários admin e papéis (Admin × Equipe)
+Usuários com acesso ao painel vivem no modelo `AdminUser` (nome, e-mail único,
+senha **armazenada apenas como hash scrypt** — nunca texto puro) e têm um
+**papel**:
+- **Admin** (`ADMIN`): acesso total — visão geral, pedidos, tortas, entregas e
+  usuários.
+- **Equipe** (`TEAM`): **só visão geral e pedidos** (pode avançar o status de
+  produção). Não acessa tortas, entregas nem usuários — as rotas e telas dessas
+  áreas respondem `403`/redirecionam.
+
+A tela `/admin/usuarios` (acessível só a Admin) permite criar, editar
+(nome/e-mail/senha/papel; senha em branco na edição mantém a atual) e excluir
+usuários. Proteções:
+- Não é possível excluir o **próprio usuário** logado.
+- Não é possível excluir o **último** usuário admin.
+- Ninguém altera o **próprio papel**; o painel nunca fica sem ao menos um
+  `ADMIN` (não é possível rebaixar o último Admin).
+- Novo usuário nasce como `TEAM` por padrão (menor privilégio); e-mail duplicado
+  é rejeitado (`400`).
+- **Status:** vigente · **Fonte:** `prisma/schema.prisma` (modelo `AdminUser`,
+  enum `AdminRole`), `src/lib/admin-users.ts`, `src/lib/auth.ts`
+  (`checkAdminRole`), `src/lib/admin-guard.ts` (`requireAdminRole`),
+  `src/app/api/admin/users/`, `src/app/admin/usuarios/`.
 
 ### BR-022 — Gestão de produção no painel
-No painel, o admin vê os pedidos e avança o fluxo de produção (botões apenas com as
-transições válidas de BR-002), com anotação opcional (ex.: "pronta às 15h"). Não há
-hoje tela de edição de catálogo (produtos/categorias) — o catálogo é administrado
-via banco/seed.
+No painel, **Admin e Equipe** (BR-032) veem os pedidos e avançam o fluxo de
+produção (botões apenas com as transições válidas de BR-002), com anotação
+opcional (ex.: "pronta às 15h"). As tortas são geridas na tela **Tortas**
+(BR-027, só Admin); categorias seguem administradas via banco/seed (não há tela
+de categorias).
 - **Status:** vigente · **Fonte:** `src/app/admin/pedidos/page.tsx`,
   `src/components/admin/order-status-control.tsx`.
 
@@ -227,14 +327,20 @@ tanto no pedido do cliente quanto no admin.
 
 ### BR-024 — Visibilidade de produto
 Produto visível na vitrine e na API pública somente com `available: true` (default
-`true`). Categoria é opcional (`categoryId` nulo). Enquanto não há fotos reais, a
-arte de exibição é um `emoji` (default `🍰`; `imageUrl` opcional).
+`true`). Categoria é opcional (`categoryId` nulo). A arte de exibição de cada torta
+é definida por `imageUrl` (preenchida na edição da torta); sem foto real, o
+fallback é o `emoji` (default `🍰`).
 - **Status:** vigente · **Fonte:** `prisma/schema.prisma` (modelo `Product`),
   `src/app/page.tsx`, `src/app/api/products/route.ts`.
+- **Observação:** a distribuição automática de fotos ilustrativas na vitrine é um
+  **procedimento temporário de popularização** (ver `TECNICO.md` §2 e
+  `DIRETRIZES.md` §3.7) — não é regra de negócio; o fluxo regular é a edição de
+  cada torta.
 
 ### BR-025 — Seed de demonstração
 O seed cria/atualiza (upsert por slug) 3 categorias — Clássicas, Frutas, Especiais —
-e 6 tortas de exemplo. Re-executável sem duplicar (idempotente).
+e 6 tortas de exemplo, com `weightGrams` (peso em gramas). Re-executável sem
+duplicar (idempotente).
 - **Status:** vigente · **Fonte:** `prisma/seed.mjs`.
 
 ### BR-026 — Promessas de comunicação (copy) não validadas pelo sistema
@@ -246,6 +352,19 @@ e-mails.** Antes de produção, decidir quais promessas viram regra real (agenda
 região, notificações) ou ajustar o copy.
 - **Status:** vigente (copy) · **Fonte:** `src/app/tortas/[slug]/page.tsx`.
 
+### BR-027 — Gestão de tortas no painel
+O painel tem a tela **Tortas** (`/admin/tortas`): lista todas as tortas (disponíveis
+e indisponíveis) e permite criar, editar e excluir. Campos: nome, peso em gramas
+(obrigatório no formulário), descrição, preço (inteiro em centavos, DEC-01), imagem
+(upload de arquivo no painel — JPG/PNG/WebP até 5 MB — ou URL) e disponibilidade
+(`available`). O `slug` é gerado
+automaticamente a partir do nome (único; sufixo `-2`, `-3`… em conflito) e
+regenerado quando o nome muda. Excluir uma torta não altera pedidos antigos: os
+itens do pedido guardam snapshot de nome/preço (DEC-08).
+- **Status:** vigente · **Fonte:** `src/app/admin/tortas/`,
+  `src/app/api/admin/products/route.ts`, `src/app/api/admin/products/[id]/route.ts`,
+  `src/lib/products-admin.ts`.
+
 ---
 
 ## 8. Controle de mudanças das regras
@@ -253,3 +372,20 @@ região, notificações) ou ajustar o copy.
 | Regra | Data | Mudança | Motivo |
 |---|---|---|---|
 | — | 2026-08-19 | Criação do documento (BR-001 a BR-026) | Documentação inicial do projeto |
+| BR-024 | 2026-08-19 | Texto revertido ao original + observação: distribuição automática de fotos ilustrativas é **procedimento temporário de popularização**, não regra de negócio | Alinhamento com o dono do projeto: fluxo regular é a edição de cada torta (`imageUrl`) |
+| BR-022 | 2026-08-20 | Texto ajustado: gestão de tortas agora tem tela no painel (BR-027); categorias seguem via banco/seed | CRUD de tortas implementado |
+| BR-025 | 2026-08-20 | Seed passou a incluir `weightGrams` (peso em gramas) | Campo peso criado para o CRUD |
+| BR-027 | 2026-08-20 | Nova regra: gestão de tortas no painel (criar/editar/excluir; slug automático; imagem por URL) | CRUD de tortas implementado |
+| BR-027 | 2026-08-20 | Texto atualizado: imagem agora suporta upload de arquivo no painel (não só URL) | Upload de imagem implementado |
+| BR-010 | 2026-08-20 | Taxa única global substituída por **faixas de distância** (`DeliveryFeeRange`, com faixa aberta opcional e validação de sobreposição) | CRUD de preço de entrega implementado (pedido do dono) |
+| BR-011 | 2026-08-20 | Endereço de entrega passou a ser obrigatório **apenas** quando a entrega é escolhida (retirada na loja não exige) | Escolha retirada × entrega implementada |
+| BR-028 | 2026-08-20 | Nova regra: escolha no checkout entre retirar na loja e entrega (`Order.deliveryType`) | Pedido do dono |
+| BR-029 | 2026-08-20 | Nova regra: cobertura da entrega — distância fora de toda faixa recusa a entrega (faixa aberta opcional) | Pedido do dono |
+| BR-030 | 2026-08-20 | Nova regra: ponto de saída da loja configurável no painel (CEP obrigatório; endereço opcional p/ exibição) | Pedido do dono |
+| BR-031 | 2026-08-20 | Nova regra: distância calculada pelo CEP (haversine) com snapshot `deliveryDistanceKm` no pedido | Pedido do dono |
+| BR-021 | 2026-08-20 | Login deixou de ser senha única: passou a exigir **e-mail + senha de usuário admin** (sessão HMAC vinculada ao usuário) | Sistema de usuários admin implementado (decisão do dono) |
+| BR-032 | 2026-08-20 | Nova regra: gestão de usuários admin (criar/editar/excluir; senha com hash scrypt; não exclui a si mesmo nem o último admin) | Sistema de usuários admin implementado |
+| BR-032 | 2026-08-20 | Adicionados **papéis** Admin × Equipe: Equipe só vê visão geral e pedidos; guardas por papel nas rotas/telas; novo usuário nasce Equipe; ninguém altera o próprio papel nem deixa o painel sem Admin | Papel abaixo de admin implementado (pedido do dono) |
+| BR-022 | 2026-08-20 | Texto ajustado: gestão de pedidos agora é de **Admin e Equipe** (BR-032); tortas seguem só do Admin | Papéis implementados |
+| BR-031 | 2026-08-20 | Texto atualizado: CEPs irresolvíveis pelos serviços gratuitos são recusados como "CEP inválido" (INC-01) | Revisão das sessões do dia |
+| BR-033 | 2026-08-20 | Nova regra: carrinho é esvaziado ao concluir o pedido (`clear()` no checkout após 201; cards voltam a "Adicionar") | Avaliação do fluxo pós-compra (pedido do dono) |

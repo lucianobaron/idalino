@@ -28,7 +28,7 @@ Legenda de status: `aceita` (vigente) · `substituída` (vale o histórico, não
 - **Contexto:** valores monetários em ponto flutuante causam erros de arredondamento.
 - **Decisão:** todo valor monetário é armazenado e trafegado como inteiro em centavos.
   Convenção de nomes: sufixo `Cents` (`priceCents`, `subtotalCents`, `deliveryFeeCents`,
-  `totalCents`, `unitPriceCents`, `amountCents`, `DELIVERY_FEE_CENTS`). A conversão para
+  `totalCents`, `unitPriceCents`, `amountCents`). A conversão para
   exibição acontece apenas na borda, via `formatBRL()` (`src/lib/format.ts`).
 - **Onde:** `prisma/schema.prisma`, `src/lib/format.ts`, `src/lib/constants.ts`,
   `src/lib/payments/types.ts`.
@@ -49,7 +49,7 @@ Legenda de status: `aceita` (vigente) · `substituída` (vale o histórico, não
   (procedimento completo em `TECNICO.md` §8).
 
 ### DEC-03 — Autenticação do admin: senha única + cookie HMAC (nível dev)
-- **Status:** aceita (com restrição explícita de uso)
+- **Status:** substituída (ver DEC-22) · **Data:** projeto inicial (commit `0397305`)
 - **Contexto:** painel administrativo precisa de controle de acesso simples na fase de
   desenvolvimento.
 - **Decisão:** senha única (`ADMIN_PASSWORD`, default dev `idalino-admin`) que emite um
@@ -60,6 +60,7 @@ Legenda de status: `aceita` (vigente) · `substituída` (vale o histórico, não
   única sem hash, sem MFA). Em produção: trocar por Auth.js/NextAuth ou SSO, definir
   `ADMIN_SECRET` forte e `COOKIE_SECURE=true`, e remover o hint de senha padrão do
   formulário de login. Ver `TECNICO.md` §6 (segurança) e achados.
+- **Substituída por:** DEC-22 (usuários admin com senha por usuário).
 
 ### DEC-04 — PostgreSQL via Docker + Prisma ORM
 - **Status:** aceita
@@ -269,6 +270,114 @@ Legenda de status: `aceita` (vigente) · `substituída` (vale o histórico, não
   Quando a estrutura da skill conflitar com outra diretriz, a instrução direta do
   usuário manda acima de tudo.
 
+### DEC-21 — Preço de entrega por faixas de distância (motor isolado)
+- **Status:** aceita · **Data:** 2026-08-20
+- **Contexto:** a taxa única de entrega (`DELIVERY_FEE_CENTS`) não reflete o custo
+  real, que varia com a distância até o ponto de saída da loja. O dono pediu um
+  CRUD de preço por faixas de distância e a escolha, no checkout, entre retirar na
+  loja e receber em casa.
+- **Decisão:** o preço da entrega vive em **faixas de distância** (`DeliveryFeeRange`:
+  `minKm` inclusivo, `maxKm` exclusivo — **nulo = faixa aberta**, `priceCents`),
+  geridas no painel em `/admin/entregas` (CRUD completo, validação sem sobreposição
+  e no máximo uma faixa aberta por último). O **ponto de saída da loja** é
+  configurável no mesmo painel (`StoreSettings`, linha única `id = "store"`; CEP
+  obrigatório, endereço opcional p/ exibição). A **distância** é calculada no
+  servidor pelas coordenadas dos CEPs (loja × entrega) via serviços gratuitos sem
+  chave — AwesomeAPI CEP com fallback Nominatim/OSM — e distância em linha reta
+  (haversine), com cache em memória; o motor é **isolado em `src/lib/delivery.ts`**
+  (mesma filosofia da camada de pagamento, DEC-02) para trocar por um provedor
+  preciso em produção. O pedido grava `deliveryType` (`DELIVERY | PICKUP`), a taxa
+  cobrada (`deliveryFeeCents`) e a distância (`deliveryDistanceKm`) como snapshot;
+  na retirada a taxa é zero e o endereço não é exigido. Distância fora de toda
+  faixa **recusa** a entrega para aquele CEP (faixa aberta, quando existir, cobre
+  o resto); a retirada segue sempre disponível. A taxa única `DELIVERY_FEE_CENTS`
+  foi removida.
+- **Onde:** `prisma/schema.prisma` (modelos `DeliveryFeeRange`, `StoreSettings`,
+  enum `DeliveryType`, `Order.deliveryType`/`deliveryDistanceKm`/endereço opcional),
+  `src/lib/delivery.ts`, `src/lib/delivery-fees-admin.ts`,
+  `src/app/admin/entregas/`, `src/app/api/delivery/quote/route.ts`,
+  `src/app/api/admin/delivery-fees/`, `src/app/api/admin/delivery/settings/route.ts`.
+- **Consequência:** em produção, migrar o motor de distância para provedor com SLA
+  (ex.: Google Distance Matrix) tocando apenas `src/lib/delivery.ts`; calibragem
+  das faixas deve considerar que a distância é em linha reta (rota real é maior).
+  Regras de negócio: BR-010, BR-028 a BR-031 em `REGRAS-DE-NEGOCIO.md`; achado
+  ACH-17 em `TECNICO.md`.
+
+### DEC-22 — Admin com usuários (e-mail + senha por usuário, hash scrypt)
+- **Status:** aceita · **Data:** 2026-08-20
+- **Contexto:** o dono pediu um segundo usuário admin — o esquema de senha única
+  (DEC-03) não comporta identidades individuais.
+- **Decisão:** o acesso ao painel passa a ser por **usuário admin** (`AdminUser`:
+  nome, e-mail único, `passwordHash`). A senha é armazenada apenas como hash
+  **scrypt** do Node (`salt:hash`, comparação com `timingSafeEqual`) — sem
+  dependência externa (DEC-16). Cada usuário tem um **papel** (`AdminRole`):
+  `ADMIN` (tudo) ou `TEAM` (só visão geral e pedidos) — guardas por papel nas
+  rotas de API (`checkAdminRole` → `401/403`) e páginas (`requireAdminRole` →
+  redireciona); novo usuário nasce `TEAM` (menor privilégio); ninguém altera o
+  próprio papel nem deixa o painel sem ao menos um `ADMIN`. A sessão continua o
+  cookie HMAC `idalino_admin`, agora com o `uid` do usuário no payload
+  (`exp=...&uid=...`), validade de 3 dias; `isAdmin()` segue verificando a
+  assinatura, e `getCurrentAdmin()` identifica o usuário logado (token antigo
+  sem `uid` exige novo login). Gestão em `/admin/usuarios` (criar/editar/excluir;
+  não exclui a si mesmo nem o último admin). O seed cria o admin inicial
+  `admin@idalino.local` / `idalino-admin` (dev; alterável na tela; o seed nunca
+  sobrescreve senha alterada). `ADMIN_PASSWORD` deixou de ser usado pelo login
+  (permanece inerte no `.env`); `ADMIN_SECRET` continua sendo o segredo do cookie.
+- **Onde:** `prisma/schema.prisma` (modelo `AdminUser`, enum `AdminRole`),
+  `src/lib/admin-users.ts`, `src/lib/auth.ts`, `src/lib/admin-guard.ts`,
+  `src/app/api/admin/login/route.ts`, `src/app/api/admin/session/route.ts`,
+  `src/app/api/admin/users/`, `src/app/admin/usuarios/`, `prisma/seed.mjs`.
+- **Consequência:** substitui a DEC-03 (marcada como `substituída`). Ainda é nível
+  dev (sem rate-limit no login, sem MFA): em produção, trocar por Auth.js/SSO
+  mantendo a mesma interface de sessão. Regras: BR-021/BR-032 em
+  `REGRAS-DE-NEGOCIO.md`; achado ACH-18 em `TECNICO.md`.
+
+### DEC-23 — Reação visível ao adicionar torta ao carrinho
+- **Status:** substituída (ver DEC-24) · **Data:** 2026-08-20
+- **Contexto:** o dono pediu que adicionar uma torta ao carrinho tenha reação
+  visível — antes, o clique só mudava estado interno (itemCount/localStorage)
+  sem feedback percebível.
+- **Decisão:** toda adição ao carrinho dá feedback em dois lugares: (1) o botão
+  adicionado troca o rótulo para **"✓ Adicionado"** (fundo `bg-accent-deep`) por
+  ~1,6 s e anuncia a ação via `role="status"` (sr-only); (2) a badge do carrinho
+  na navegação dá um **bump** one-shot (escala 1 → 1.35 → 1, 320 ms,
+  `--ease-out`) sempre que o `itemCount` muda — a hidratação inicial do
+  `localStorage` não anima (não é ação do usuário). Tudo CSS-only (projeto
+  motion-cut): tokens de easing (`--ease-out/in/in-out`) em `globals.css` e
+  `prefers-reduced-motion` tratado pela regra global existente.
+- **Onde:** `src/components/cart/use-add-to-cart.ts` (hook compartilhado que
+  envolve `addItem` + estado `justAdded`), `src/components/add-to-cart-button.tsx`,
+  `src/components/torta-card.tsx`, `src/components/cart/cart-button.tsx`,
+  `src/app/globals.css`.
+- **Consequência:** qualquer novo ponto de adição ao carrinho deve usar
+  `useAddToCart()` para manter o feedback consistente; a reação é client-side e
+  não altera o estado do carrinho nem a validação no servidor (DEC-06).
+- **Substituída por:** DEC-24 (controle de quantidade padrão de mercado).
+
+### DEC-24 — Controle de quantidade padrão de mercado após adicionar ao carrinho
+- **Status:** aceita · **Data:** 2026-08-20
+- **Contexto:** o dono avaliou o feedback da DEC-23 ("Adicionado ✓" piscando e
+  voltando ao normal) como ruim e pediu o padrão de mercado: após adicionar,
+  exibir a quantidade com botões de aumentar, diminuir e excluir.
+- **Decisão:** substitui a DEC-23 (label transitório). O componente
+  `CartControls` renderiza, para cada torta: o botão **"Adicionar"** enquanto o
+  item não está no carrinho; quando está, um **stepper persistente** "− quantidade
+  +" (o "−" fica desabilitado na quantidade 1; "+" sempre aumenta; **excluir**
+  via ícone de lixeira chama `removeItem`). O estado vem do carrinho (DEC-13),
+  então vitrine e detalhe mostram a mesma quantidade e reagem a mudanças feitas
+  em qualquer ponto — o morph botão→stepper é a reação visível ao adicionar. O
+  bump da badge do carrinho da DEC-23 é mantido (feedback extra ao mudar
+  `itemCount`).
+- **Onde:** `src/components/cart/cart-controls.tsx` (novo, com variantes
+  `card`/`hero`), `src/components/torta-card.tsx`,
+  `src/app/tortas/[slug]/page.tsx`; removidos `add-to-cart-button.tsx` e
+  `use-add-to-cart.ts` (superseded); bump em `src/components/cart/cart-button.tsx`
+  e `src/app/globals.css` mantidos.
+- **Consequência:** qualquer ponto de adição usa `CartControls`; a quantidade
+  mínima é 1 (remover abaixo disso é só via excluir); a reação continua
+  client-side, sem mudar o estado do carrinho nem a validação no servidor
+  (DEC-06).
+
 ## 3. Procedimentos obrigatórios
 
 ### 3.1 Setup do ambiente (novo dev / máquina nova)
@@ -328,7 +437,13 @@ Legenda de status: `aceita` (vigente) · `substituída` (vale o histórico, não
   `formatBRL()`.
 - **Idioma:** UI e mensagens de erro em pt-BR; rótulos de status em
   `src/lib/order-status.ts` (única fonte).
-- **Arte:** enquanto não há fotos reais, produtos usam `emoji` (default `🍰`).
+- **Arte:** a arte de exibição de cada torta é definida por `imageUrl` (fluxo
+  regular: edição da torta). **Procedimento temporário de popularização:** enquanto
+  as tortas não têm foto real, a vitrine usa fotos ilustrativas de `public/tortas/`
+  atribuídas por ordem de exibição (`src/lib/torta-images.ts` — posição `i` → foto
+  `i % 6`); o `emoji` (default `🍰`) é o fallback. O carrinho guarda a foto resolvida
+  na adição como snapshot no item (`CartItem.imageUrl`) e exibe o mesmo thumb;
+  itens antigos no `localStorage` sem o campo caem no emoji. Detalhes em `TECNICO.md` §2.
 - **Fronteira server/client:** páginas que leem banco são Server Components
   `force-dynamic`; só superfícies interativas são client components (DEC-05).
 - **Validação:** Zod no servidor para toda entrada (formulários e API); mensagens de
@@ -337,11 +452,10 @@ Legenda de status: `aceita` (vigente) · `substituída` (vale o histórico, não
   `src/components/`, lógica em `src/lib/` (domínio em `src/lib/payments/`).
 
 ### 3.8 Segurança (checklist antes de produção)
-- [ ] `ADMIN_PASSWORD` forte (não `idalino-admin`) e `ADMIN_SECRET` aleatório longo.
+- [ ] Senhas dos usuários admin fortes (nunca o default dev `idalino-admin`) e
+      `ADMIN_SECRET` aleatório longo.
 - [ ] `COOKIE_SECURE=true` (site em HTTPS).
-- [ ] Remover o hint de senha padrão do formulário de login
-      (`src/components/admin/login-form.tsx`).
-- [ ] Trocar auth do admin por Auth.js/SSO (DEC-03) e adicionar rate-limit no login.
+- [ ] Trocar auth do admin por Auth.js/SSO (DEC-22) e adicionar rate-limit no login.
 - [ ] Confirmar que nenhum segredo foi commitado (`git log -p` se necessário).
 
 ### 3.9 Processar solicitações com a skill fable-method (ferramenta complementar)
@@ -455,4 +569,11 @@ Não existe check-out apressado que dispense esta conferência.
 | 2026-08-19 | Diretrizes | §3.9: inclusão do skill i-have-adhd (formato de interação obrigatório com o dono do projeto) |
 | 2026-08-19 | Diretrizes | Inclusão do procedimento **§3.12 — conferência obrigatória antes de declarar a tarefa concluída** (existe informação a registrar? documentação atualizada?), com referências no §3.6 e §3.9 |
 | 2026-08-19 | Diretrizes | Inclusão de DEC-19 (`.hallmark/log.json` mantido versionado como histórico de design, fechando o achado ACH-12) |
-| 2026-08-19 | Diretrizes | Inclusão de DEC-20 (skill `i-have-adhd` incorporada — formato de interação obrigatório com o dono do projeto, fechando a lacuna de DEC para a skill do commit `cfba827`) |
+| 2026-08-19 | Diretrizes | §3.7: convenção de arte — `imageUrl` (edição da torta) como fluxo regular; fotos ilustrativas de `public/tortas/` por ordem de exibição (`src/lib/torta-images.ts`) como **procedimento temporário de popularização**; `emoji` como fallback (ref. TECNICO §2; não é regra de negócio) |
+| 2026-08-20 | Diretrizes | Inclusão de DEC-21 (preço de entrega por faixas de distância; motor de distância isolado em `src/lib/delivery.ts` com serviços gratuitos; ponto de saída configurável no painel; remoção de `DELIVERY_FEE_CENTS`) |
+| 2026-08-20 | Diretrizes | DEC-03 marcada como `substituída`; inclusão de DEC-22 (admin com usuários: e-mail + senha com hash scrypt, sessão HMAC vinculada ao usuário, gestão em `/admin/usuarios`); §3.8 atualizado |
+| 2026-08-20 | Diretrizes | DEC-22 atualizada: papéis Admin × Equipe (`AdminRole`), guardas por papel em APIs e páginas, proteções de papel (não muda o próprio papel; nunca fica sem Admin) |
+| 2026-08-20 | Diretrizes | DEC-01: exemplo `DELIVERY_FEE_CENTS` removido da lista de convenção (constante inexistente desde a DEC-21); referências históricas mantidas |
+| 2026-08-20 | Diretrizes | §3.7: carrinho guarda a foto resolvida na adição como snapshot no item (`CartItem.imageUrl`) e exibe o mesmo thumb da vitrine (fechando INC-02) |
+| 2026-08-20 | Diretrizes | Inclusão de DEC-23 (reação visível ao adicionar torta ao carrinho: botão "Adicionado ✓" + bump da badge; hook `useAddToCart`; CSS-only com tokens de easing e reduced-motion) |
+| 2026-08-20 | Diretrizes | DEC-23 marcada como `substituída`; inclusão de DEC-24 (controle de quantidade padrão de mercado: stepper "− quantidade +" + excluir via lixeira, persistente, refletindo o carrinho; `CartControls` com variantes card/hero; removidos `add-to-cart-button.tsx` e `use-add-to-cart.ts`) |
