@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/admin-guard";
-import { formatBRL } from "@/lib/format";
+import { formatBRL, formatKm } from "@/lib/format";
 import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from "@/lib/order-status";
 import { AdminHeader } from "@/components/admin/admin-header";
 import { OrderStatusControl } from "@/components/admin/order-status-control";
@@ -54,8 +54,17 @@ export default async function AdminOrdersPage() {
                 </p>
                 <p className="text-xs text-faint">
                   {order.createdAt.toLocaleString("pt-BR")} ·{" "}
-                  {order.street}, {order.number} — {order.neighborhood},{" "}
-                  {order.city}/{order.state}
+                  {order.deliveryType === "PICKUP" ? (
+                    "Retirada na loja"
+                  ) : (
+                    <>
+                      {order.street}, {order.number} — {order.neighborhood},{" "}
+                      {order.city}/{order.state}
+                      {order.deliveryDistanceKm !== null
+                        ? ` · ≈ ${formatKm(order.deliveryDistanceKm)}`
+                        : ""}
+                    </>
+                  )}
                   {order.notes ? ` · Obs: ${order.notes}` : ""}
                 </p>
               </div>

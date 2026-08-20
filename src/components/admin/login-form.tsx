@@ -4,22 +4,28 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Logo } from "@/components/logo";
 
+const inputClass =
+  "w-full rounded-xl border border-rule bg-paper px-3 py-2 text-sm text-ink outline-none transition placeholder:text-faint focus:border-accent focus:ring-2 focus:ring-accent/25";
+
 export function LoginForm() {
   const router = useRouter();
-  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
+    const form = new FormData(e.currentTarget);
     try {
       const res = await fetch("/api/admin/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({
+          email: form.get("email"),
+          password: form.get("password"),
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -49,13 +55,25 @@ export function LoginForm() {
       </div>
 
       <label className="mt-6 block">
+        <span className="mb-1 block text-sm font-medium text-muted">E-mail</span>
+        <input
+          type="email"
+          name="email"
+          required
+          autoComplete="username"
+          placeholder="voce@loja.com"
+          className={inputClass}
+        />
+      </label>
+
+      <label className="mt-4 block">
         <span className="mb-1 block text-sm font-medium text-muted">Senha</span>
         <input
           type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          name="password"
           required
-          className="w-full rounded-xl border border-rule bg-paper px-3 py-2 text-sm text-ink outline-none transition placeholder:text-faint focus:border-accent focus:ring-2 focus:ring-accent/25"
+          autoComplete="current-password"
+          className={inputClass}
         />
       </label>
 
