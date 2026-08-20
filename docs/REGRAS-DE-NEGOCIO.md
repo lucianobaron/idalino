@@ -170,7 +170,7 @@ No checkout, o cliente escolhe entre **retirar na loja** (`PICKUP`) e **entrega*
   distância (BR-010) e distância gravada como snapshot (`deliveryDistanceKm`).
 - **Status:** vigente · **Fonte:** `prisma/schema.prisma` (enum `DeliveryType`),
   `src/app/api/orders/route.ts`, `src/app/checkout/page.tsx`,
-  `src/app/pedido/[id]/page.tsx`, `src/app/admin/pedidos/page.tsx`.
+  `src/app/pedido/[id]/page.tsx`, `src/app/admin/(painel)/pedidos/page.tsx`.
 
 ### BR-029 — Cobertura da entrega (fora da faixa)
 A entrega só é oferecida para CEPs cuja distância até a loja se encaixe em alguma
@@ -275,11 +275,15 @@ o acesso é pelo link/URL gerado no checkout.
 ### BR-021 — Acesso ao painel exige sessão de admin
 O painel (`/admin` e telas de gestão) exige sessão válida; sem sessão, redireciona
 para `/admin/login`. O login é feito com **e-mail + senha de um usuário admin**
-(BR-032); a sessão é um cookie assinado por HMAC com validade de 3 dias,
-vinculado ao usuário logado. A API responde `401` sem sessão.
+(BR-032); a sessão é um cookie assinado por HMAC **de sessão do navegador** —
+morre ao fechar o navegador, então o painel volta a pedir login a cada abertura
+(teto de 3 dias apenas no `exp` do token, limite máximo no servidor) — vinculado
+ao usuário logado. A API responde `401` sem sessão.
 - **Status:** vigente · **Fonte:** `src/lib/auth.ts`, `src/lib/admin-guard.ts`,
-  `src/app/api/admin/login/route.ts`, `src/app/api/admin/session/route.ts`.
-- **Atenção:** autenticação é nível dev — ver `DEC-03`/`DEC-22` e `TECNICO.md` §6.
+  `src/app/api/admin/login/route.ts`, `src/app/api/admin/session/route.ts`,
+  `src/app/admin/(painel)/layout.tsx` (portão central: exige sessão para toda
+  rota sob `/admin`, exceto `/admin/login`).
+- **Atenção:** autenticação é nível dev — ver `DEC-03`/`DEC-22` e `TECNICO.md` §7.
 
 ### BR-032 — Usuários admin e papéis (Admin × Equipe)
 Usuários com acesso ao painel vivem no modelo `AdminUser` (nome, e-mail único,
@@ -303,7 +307,7 @@ usuários. Proteções:
 - **Status:** vigente · **Fonte:** `prisma/schema.prisma` (modelo `AdminUser`,
   enum `AdminRole`), `src/lib/admin-users.ts`, `src/lib/auth.ts`
   (`checkAdminRole`), `src/lib/admin-guard.ts` (`requireAdminRole`),
-  `src/app/api/admin/users/`, `src/app/admin/usuarios/`.
+  `src/app/api/admin/users/`, `src/app/admin/(painel)/usuarios/`.
 
 ### BR-022 — Gestão de produção no painel
 No painel, **Admin e Equipe** (BR-032) veem os pedidos e avançam o fluxo de
@@ -311,7 +315,7 @@ produção (botões apenas com as transições válidas de BR-002), com anotaç�
 opcional (ex.: "pronta às 15h"). As tortas são geridas na tela **Tortas**
 (BR-027, só Admin); categorias seguem administradas via banco/seed (não há tela
 de categorias).
-- **Status:** vigente · **Fonte:** `src/app/admin/pedidos/page.tsx`,
+- **Status:** vigente · **Fonte:** `src/app/admin/(painel)/pedidos/page.tsx`,
   `src/components/admin/order-status-control.tsx`.
 
 ### BR-023 — Anotações internas de produção
@@ -361,7 +365,7 @@ e indisponíveis) e permite criar, editar e excluir. Campos: nome, peso em grama
 automaticamente a partir do nome (único; sufixo `-2`, `-3`… em conflito) e
 regenerado quando o nome muda. Excluir uma torta não altera pedidos antigos: os
 itens do pedido guardam snapshot de nome/preço (DEC-08).
-- **Status:** vigente · **Fonte:** `src/app/admin/tortas/`,
+- **Status:** vigente · **Fonte:** `src/app/admin/(painel)/tortas/`,
   `src/app/api/admin/products/route.ts`, `src/app/api/admin/products/[id]/route.ts`,
   `src/lib/products-admin.ts`.
 
@@ -389,3 +393,5 @@ itens do pedido guardam snapshot de nome/preço (DEC-08).
 | BR-022 | 2026-08-20 | Texto ajustado: gestão de pedidos agora é de **Admin e Equipe** (BR-032); tortas seguem só do Admin | Papéis implementados |
 | BR-031 | 2026-08-20 | Texto atualizado: CEPs irresolvíveis pelos serviços gratuitos são recusados como "CEP inválido" (INC-01) | Revisão das sessões do dia |
 | BR-033 | 2026-08-20 | Nova regra: carrinho é esvaziado ao concluir o pedido (`clear()` no checkout após 201; cards voltam a "Adicionar") | Avaliação do fluxo pós-compra (pedido do dono) |
+| BR-021 | 2026-08-20 | Texto atualizado: exigência de sessão passou a ser garantida **por construção** — portão central `src/app/admin/(painel)/layout.tsx` (todas as páginas admin no route group; `/admin/login` fora) | Relato de área admin acessível sem login (ver ACH-21 em `TECNICO.md`) |
+| BR-021 | 2026-08-20 | Sessão alterada para **cookie de sessão do navegador** (sem `maxAge`): morre ao fechar o navegador e o painel pede login a cada abertura; `exp` do token (3 dias) vira teto máximo no servidor | Decisão do dono: "sempre pedir login ao reabrir o navegador" |

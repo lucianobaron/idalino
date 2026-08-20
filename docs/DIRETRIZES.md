@@ -295,7 +295,7 @@ Legenda de status: `aceita` (vigente) · `substituída` (vale o histórico, não
 - **Onde:** `prisma/schema.prisma` (modelos `DeliveryFeeRange`, `StoreSettings`,
   enum `DeliveryType`, `Order.deliveryType`/`deliveryDistanceKm`/endereço opcional),
   `src/lib/delivery.ts`, `src/lib/delivery-fees-admin.ts`,
-  `src/app/admin/entregas/`, `src/app/api/delivery/quote/route.ts`,
+  `src/app/admin/(painel)/entregas/`, `src/app/api/delivery/quote/route.ts`,
   `src/app/api/admin/delivery-fees/`, `src/app/api/admin/delivery/settings/route.ts`.
 - **Consequência:** em produção, migrar o motor de distância para provedor com SLA
   (ex.: Google Distance Matrix) tocando apenas `src/lib/delivery.ts`; calibragem
@@ -316,21 +316,34 @@ Legenda de status: `aceita` (vigente) · `substituída` (vale o histórico, não
   redireciona); novo usuário nasce `TEAM` (menor privilégio); ninguém altera o
   próprio papel nem deixa o painel sem ao menos um `ADMIN`. A sessão continua o
   cookie HMAC `idalino_admin`, agora com o `uid` do usuário no payload
-  (`exp=...&uid=...`), validade de 3 dias; `isAdmin()` segue verificando a
+  (`exp=...&uid=...`); `isAdmin()` segue verificando a
   assinatura, e `getCurrentAdmin()` identifica o usuário logado (token antigo
   sem `uid` exige novo login). Gestão em `/admin/usuarios` (criar/editar/excluir;
   não exclui a si mesmo nem o último admin). O seed cria o admin inicial
   `admin@idalino.local` / `idalino-admin` (dev; alterável na tela; o seed nunca
   sobrescreve senha alterada). `ADMIN_PASSWORD` deixou de ser usado pelo login
   (permanece inerte no `.env`); `ADMIN_SECRET` continua sendo o segredo do cookie.
+- **Política de sessão (alterada em 2026-08-20):** o cookie de sessão passou a ser
+  **cookie de sessão do navegador** (sem `maxAge`/`expires`) — morre ao fechar o
+  navegador, e `/admin` volta a exigir login na próxima abertura (decisão do dono:
+  "sempre pedir login ao reabrir o navegador"). O payload do token mantém o teto
+  de `exp` (3 dias, `SESSION_DAYS` em `src/lib/auth.ts`) apenas como limite máximo
+  no servidor (ex.: cookie copiado manualmente).
 - **Onde:** `prisma/schema.prisma` (modelo `AdminUser`, enum `AdminRole`),
   `src/lib/admin-users.ts`, `src/lib/auth.ts`, `src/lib/admin-guard.ts`,
   `src/app/api/admin/login/route.ts`, `src/app/api/admin/session/route.ts`,
-  `src/app/api/admin/users/`, `src/app/admin/usuarios/`, `prisma/seed.mjs`.
+  `src/app/api/admin/users/`, `src/app/admin/(painel)/usuarios/`, `prisma/seed.mjs`.
+- **Endurecimento (2026-08-20):** a exigência de sessão ganhou um **portão
+  central**: todas as páginas do painel vivem no route group
+  `src/app/admin/(painel)/` (URLs inalteradas), com `(painel)/layout.tsx`
+  chamando `requireAdmin()` — qualquer página sob `/admin` (exceto
+  `/admin/login`, que fica fora do grupo) exige login **por construção**, mesmo
+  que esqueça a própria guarda. As guardas por página (papel) permanecem como
+  defesa em profundidade.
 - **Consequência:** substitui a DEC-03 (marcada como `substituída`). Ainda é nível
   dev (sem rate-limit no login, sem MFA): em produção, trocar por Auth.js/SSO
   mantendo a mesma interface de sessão. Regras: BR-021/BR-032 em
-  `REGRAS-DE-NEGOCIO.md`; achado ACH-18 em `TECNICO.md`.
+  `REGRAS-DE-NEGOCIO.md`; achados ACH-18/ACH-21 em `TECNICO.md`.
 
 ### DEC-23 — Reação visível ao adicionar torta ao carrinho
 - **Status:** substituída (ver DEC-24) · **Data:** 2026-08-20
@@ -577,3 +590,5 @@ Não existe check-out apressado que dispense esta conferência.
 | 2026-08-20 | Diretrizes | §3.7: carrinho guarda a foto resolvida na adição como snapshot no item (`CartItem.imageUrl`) e exibe o mesmo thumb da vitrine (fechando INC-02) |
 | 2026-08-20 | Diretrizes | Inclusão de DEC-23 (reação visível ao adicionar torta ao carrinho: botão "Adicionado ✓" + bump da badge; hook `useAddToCart`; CSS-only com tokens de easing e reduced-motion) |
 | 2026-08-20 | Diretrizes | DEC-23 marcada como `substituída`; inclusão de DEC-24 (controle de quantidade padrão de mercado: stepper "− quantidade +" + excluir via lixeira, persistente, refletindo o carrinho; `CartControls` com variantes card/hero; removidos `add-to-cart-button.tsx` e `use-add-to-cart.ts`) |
+| 2026-08-20 | Diretrizes | DEC-22: endurecimento — portão central de sessão no route group `(painel)` (`src/app/admin/(painel)/layout.tsx` com `requireAdmin()`); páginas do painel movidas para o grupo (URLs inalteradas); guardas por página mantidas como defesa em profundidade (fecha relato de área admin acessível sem login — ver ACH-21 em `TECNICO.md`) |
+| 2026-08-20 | Diretrizes | DEC-22: política de sessão alterada — cookie de **sessão do navegador** (sem `maxAge`), morre ao fechar o navegador; `/admin` volta a pedir login a cada abertura (decisão do dono); teto de `exp` (3 dias) mantido no token como limite máximo no servidor |

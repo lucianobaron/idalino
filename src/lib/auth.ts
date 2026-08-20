@@ -2,6 +2,10 @@
 //
 // Sessão stateless por cookie HMAC (payload `exp=...&uid=...` assinado).
 // O login valida e-mail + senha contra o modelo AdminUser (src/lib/admin-users.ts).
+// Política de sessão (decisão do dono, 2026-08-20): o cookie é de SESSÃO —
+// sem maxAge/expires — e morre ao fechar o navegador, fazendo /admin exigir
+// login novamente na próxima abertura. O token guarda um teto de exp (3 dias,
+// SESSION_DAYS) apenas como limite máximo no servidor (ex.: cookie copiado).
 // Aviso: ainda é uma autenticação de nível dev — para produção, troque por
 // algo mais robusto (Auth.js / NextAuth, SSO, etc.).
 
@@ -12,6 +16,8 @@ import type { AdminRole } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 const COOKIE_NAME = "idalino_admin";
+// Teto de exp no payload do token (limite máximo no servidor); o cookie em si
+// é de sessão (sem maxAge) — ver comentário no topo e em api/admin/login.
 const SESSION_DAYS = 3;
 
 function getSecret(): string {

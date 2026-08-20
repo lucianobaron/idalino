@@ -105,7 +105,7 @@ src/
     carrinho           # carrinho
     checkout           # formulário de encomenda (retirada × entrega)
     pedido/[id]        # acompanhamento + pagamento mock
-    admin/             # painel (login, visão geral, pedidos, tortas, entregas, usuários)
+    admin/             # painel — login fora do grupo; demais telas em (painel)/ (protegidas pelo layout)
     api/               # orders, products, delivery/quote, admin (login, usuários, ...)
   components/          # carrinho (context), cards, admin
   lib/
@@ -173,5 +173,6 @@ Code, Cursor, Codex) com 21 temas, 57 gates de slop-test e quatro verbos
 - Dinheiro é sempre tratado em **centavos** (`priceCents`, `totalCents`) para
   evitar erros de ponto flutuante.
 - A autenticação do admin é por **usuários** (e-mail + senha com hash scrypt e
-  papéis Admin × Equipe) com cookie assinado (HMAC) — suficiente para
-  desenvolvimento; troque por Auth.js/SSO em produção (ver DEC-22).
+  papéis Admin × Equipe) com cookie assinado (HMAC) de **sessão do navegador** —
+  expira ao fechar o navegador, então `/admin` pede login a cada abertura.
+  Suficiente para desenvolvimento; troque por Auth.js/SSO em produção (ver DEC-22).

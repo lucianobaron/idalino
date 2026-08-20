@@ -42,7 +42,7 @@ idalino/
 │   │   ├── carrinho/            # carrinho
 │   │   ├── checkout/            # formulário de encomenda (retirada × entrega)
 │   │   ├── pedido/[id]/         # acompanhamento + pagamento mock
-│   │   ├── admin/               # painel (login, visão geral, pedidos, tortas, entregas, usuários)
+│   │   ├── admin/               # painel — login fora do grupo; demais telas em `(painel)/` (route group: URLs idênticas, protegidas pelo layout)
 │   │   └── api/                 # orders, products, delivery/quote, admin (login, usuários, ...)
 │   ├── components/        # componentes (cart, admin, torta-card, logo, botões)
 │   └── lib/
@@ -125,7 +125,7 @@ IDs: CUID (`@default(cuid())`). Dinheiro: inteiro em centavos em todos os modelo
 | POST | `/api/orders` | — | Cria cliente + pedido + pagamento (valida com Zod, recalcula preços; taxa de entrega por faixa — DEC-06) |
 | POST | `/api/orders/[id]/pay` | — | Simula webhook: aprova pagamento → `PAID` (só se `PENDING_PAYMENT`) |
 | GET | `/api/delivery/quote?cep=...` | — | Cotação da entrega para um CEP (prévia no checkout; distância + taxa da faixa) |
-| POST | `/api/admin/login` | — | Valida **e-mail + senha** de um usuário admin (AdminUser) e emite cookie de sessão (3 dias) |
+| POST | `/api/admin/login` | — | Valida **e-mail + senha** de um usuário admin (AdminUser) e emite **cookie de sessão** (sem `maxAge` — morre ao fechar o navegador; teto de 3 dias apenas no `exp` do token) |
 | DELETE | `/api/admin/login` | cookie | Logout (remove cookie) |
 | GET | `/api/admin/session` | cookie | Nome do usuário admin logado (cabeçalho do painel) |
 | POST | `/api/admin/users` | cookie + ADMIN | Cria usuário admin (e-mail único; senha com hash scrypt; papel default `TEAM`) |
@@ -182,10 +182,18 @@ criados no seed (`admin@idalino.local` / `idalino-admin`, dev) e geridos em
 
 - **Sessão admin:** cookie `idalino_admin` com payload `exp=<ts>&uid=<id>` assinado por
   HMAC-SHA256 (`timingSafeEqual` na verificação), `httpOnly`, `sameSite: lax`,
-  `maxAge` 3 dias. O login valida e-mail + senha contra `AdminUser` (hash scrypt do
+  **cookie de sessão do navegador** (sem `maxAge`/`expires` — morre ao fechar o
+  navegador; decisão do dono em 2026-08-20). O `exp` do token (3 dias,
+  `SESSION_DAYS`) é apenas o teto máximo no servidor. O login valida e-mail +
+  senha contra `AdminUser` (hash scrypt do
   Node, `src/lib/admin-users.ts`). **Limites:** sem rate-limit no login; sem MFA;
   fallback de `ADMIN_SECRET` embutido no código; sessões emitidas antes da DEC-22
   (sem `uid`) exigem novo login. Uso **apenas** em desenvolvimento (ver `DEC-03`/`DEC-22`).
+- **Portão central do painel:** todas as páginas admin vivem no route group
+  `src/app/admin/(painel)/`, cujo `layout.tsx` chama `requireAdmin()` — a exigência
+  de sessão vale **por construção** para qualquer rota sob `/admin` (exceto
+  `/admin/login`), independentemente da guarda individual de cada página
+  (mantidas como defesa em profundidade; ver ACH-21).
 - **Segredos:** `.env` está no `.gitignore`; `.env.example` contém apenas defaults de
   dev. Nunca commitar segredos reais.
 - **Preços:** nunca confiar no cliente (revalidação no servidor — `BR-007`).
@@ -218,6 +226,7 @@ Novas descobertas entram aqui com data e referência ao código.
 | ACH-18 | 2026-08-20 | Auth do admin migrou de senha única para usuários (migration `20260820160934_add_admin_users`): modelo `AdminUser` com `passwordHash` **scrypt** do Node (`salt:hash`, `timingSafeEqual`) — sem dependência externa; sessão HMAC agora carrega `uid`; rotas `/api/admin/users` e `/api/admin/session`; tela `/admin/usuarios`; seed cria `admin@idalino.local` / `idalino-admin` (dev; nunca sobrescreve senha alterada). `ADMIN_PASSWORD` ficou **inerte** no `.env` (o login não o lê mais). | **Limites:** continua nível dev — sem rate-limit no login, sem MFA; produção deve trocar por Auth.js/SSO (DEC-22). Sessões antigas (sem `uid`) exigem novo login. A implementação substitui a DEC-03. |
 | ACH-19 | 2026-08-20 | Papéis admin (migration `20260820162056_add_admin_role`): enum `AdminRole` (`ADMIN` \| `TEAM`) em `AdminUser`; guardas por papel — `checkAdminRole()`/`roleDeniedResponse()` nas APIs (401/403) e `requireAdminRole()` nas páginas (redirect p/ `/admin`); telas/rotas de tortas, entregas e usuários exigem `ADMIN`; status de pedido segue acessível a `TEAM`; novo usuário nasce `TEAM`; proteções de papel no PATCH (não muda o próprio papel; não deixa o painel sem Admin). | Navegação do header filtra links por papel (via `/api/admin/session` → `role`). Nenhum impacto no fluxo público/checkout. |
 | ACH-20 | 2026-08-20 | O `.env` de dev tem `ADMIN_PASSWORD="idalino-admin"` **com aspas literais**: o valor carregado em `process.env` incluiu as aspas (o login antigo de senha única só aceitava a senha digitada **com** as aspas). Com a DEC-22 a variável ficou inerte (login por usuário em banco), mas o quirk vale para qualquer outra variável do `.env`. | Não é bug do código — é como o valor foi gravado no arquivo. Ao editar `.env`, gravar valores **sem aspas** quando o consumidor não as esperar (senhas/secrets); conferir o valor efetivo após o load. |
+| ACH-21 | 2026-08-20 | **Relato do dono: área admin acessível sem login** ("basta adicionar /admin"). Verificado por observação que a fonte atual **já protegia** todas as páginas (`requireAdmin`/`requireAdminRole`) e rotas API admin; o relato não reproduz na fonte atual (dev e produção recompilada respondem `307 → /admin/login`). Duas vulnerabilidades de classe: (1) a exigência de login era **por convenção** — dependia de cada página lembrar da guarda (página nova esquecida = área aberta); (2) build de produção `.next` anterior às últimas alterações servia estado antigo. | **Endurecimento aplicado:** páginas admin movidas para o route group `src/app/admin/(painel)/` (URLs inalteradas) com `layout.tsx` chamando `requireAdmin()` — login obrigatório **por construção** para toda rota sob `/admin`, exceto `/admin/login` (fora do grupo). Guardas por página mantidas (defesa em profundidade). Verificado: sem cookie → `307` em todas as páginas; cookie inválido → `307`; cookie com assinatura válida → `200` (dashboard renderiza); `/admin/login` → `200`; lint e build verdes. |
 
 ## 9. Registro de intercorrências
 
@@ -247,3 +256,5 @@ data, sintoma, causa, impacto e resolução. Nunca sobrescrever ocorrência anti
 | 2026-08-20 | Documentação | Papéis admin: migration `20260820162056_add_admin_role` (enum `AdminRole`), guardas por papel em APIs e páginas (tortas/entregas/usuários exigem ADMIN; pedidos acessível a TEAM), formulário/lista com papel, header filtra links; achado ACH-19 |
 | 2026-08-20 | Documentação | Revisão das sessões do dia: §2 (estrutura) e §5 sem `ADMIN_PASSWORD` (inerte); §6 com nota do EPERM no `prisma generate` (dev server aberto); ACH-01 com obs. do valor fixo do Pix mock; ACH-17 atualizado (fallback por postalcode; CEPs irresolvíveis recusados); achado ACH-20 (aspas literais no `.env`); **INC-01** (fallback de texto livre do Nominatim com distâncias erradas) |
 | 2026-08-20 | Documentação | §2: carrinho guarda a foto resolvida na adição (`CartItem.imageUrl`, snapshot) e exibe o mesmo thumb da vitrine; **INC-02** (thumb do carrinho sem a foto da torta — só emoji) |
+| 2026-08-20 | Documentação | Portão central de sessão do painel: páginas admin movidas para `src/app/admin/(painel)/` com layout chamando `requireAdmin()` (URLs inalteradas; `/admin/login` fora do grupo); §2 e §7 atualizados; achado ACH-21 (relato de área admin sem login — não reproduz na fonte atual; endurecimento estrutural) |
+| 2026-08-20 | Documentação | Política de sessão: cookie admin passou a ser **cookie de sessão do navegador** (sem `maxAge` — morre ao fechar o navegador; `/admin` pede login a cada abertura); `exp` do token (3 dias) vira teto máximo no servidor; §4 (API) e §7 (segurança) atualizados |

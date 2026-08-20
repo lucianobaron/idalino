@@ -41,7 +41,9 @@ export async function POST(request: Request) {
     // Em produção (HTTPS) defina COOKIE_SECURE=true no ambiente
     secure: process.env.COOKIE_SECURE === "true",
     path: "/",
-    maxAge: 60 * 60 * 24 * 3, // 3 dias
+    // Sem maxAge/expires: cookie de sessão — morre ao fechar o navegador,
+    // então /admin volta a exigir login na próxima abertura (decisão do dono).
+    // O token mantém um teto de 3 dias (exp) como limite máximo no servidor.
   });
 
   return NextResponse.json({ ok: true, name: admin.name });
