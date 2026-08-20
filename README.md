@@ -7,11 +7,13 @@ gerenciar a produção dos pedidos.
 ## ✨ Funcionalidades
 
 - **Vitrine** — catálogo de tortas com categorias, preços e detalhes
-- **Carrinho + Checkout** — encomenda com dados de entrega e observações
+- **Carrinho + Checkout** — encomenda com escolha de **retirar na loja ou
+  receber em casa** (taxa de entrega calculada pela distância do CEP até a loja)
 - **Pagamento mock** — fluxo Pix simulado (pronto para plugar um gateway real)
 - **Acompanhamento** — o cliente vê o status do pedido e o histórico
-- **Painel admin** — visão geral (contadores) e gestão de produção
-  (pago → em produção → pronto → entregue), com anotações e auditoria
+- **Painel admin** — visão geral, gestão de produção (pago → em produção →
+  pronto → entregue), catálogo de tortas, faixas de entrega e **usuários com
+  papéis** (Admin × Equipe)
 
 ## 🧱 Stack
 
@@ -37,7 +39,8 @@ cp .env.example .env   # Windows: copy .env.example .env
 # 3. Instale as dependências
 npm install
 
-# 4. Gere o cliente Prisma, crie as tabelas e popule com tortas de exemplo
+# 4. Gere o cliente Prisma, crie as tabelas e popule (tortas, faixas de
+#    entrega e o usuário admin inicial)
 npx prisma generate
 npm run db:migrate
 npm run db:seed
@@ -49,8 +52,9 @@ npm run dev
 Acesse:
 
 - Vitrine: http://localhost:3000
-- Painel admin: http://localhost:3000/admin (senha padrão: `idalino-admin`,
-  altere `ADMIN_PASSWORD` no `.env`)
+- Painel admin: http://localhost:3000/admin — login com **e-mail + senha** de um
+  usuário admin. O seed cria o primeiro (`admin@idalino.local` / `idalino-admin`,
+  nível dev); gerencie usuários e papéis em `/admin/usuarios`.
 
 > Se a porta 5432 estiver ocupada, troque a porta no `docker-compose.yml` e a
 > `DATABASE_URL` no `.env` de forma correspondente.
@@ -92,22 +96,24 @@ fable-method/            # método de raciocínio p/ agentes de IA (vendored)
 hallmark/                # skill de design anti-AI-slop p/ agentes (vendored)
   SKILL.md + references/ # regras de design; LICENSE (MIT); update.mjs
 prisma/
-  schema.prisma        # modelos: produtos, clientes, pedidos, produção
-  seed.mjs             # tortas de exemplo
+  schema.prisma        # modelos: produtos, clientes, pedidos, faixas de entrega, usuários admin
+  seed.mjs             # tortas, faixas de entrega e admin inicial de exemplo
 src/
   app/
     page.tsx           # vitrine (home)
     tortas/[slug]      # detalhe do produto
     carrinho           # carrinho
-    checkout           # formulário de encomenda
+    checkout           # formulário de encomenda (retirada × entrega)
     pedido/[id]        # acompanhamento + pagamento mock
-    admin/             # painel (login, visão geral, pedidos)
-    api/               # orders, products, admin
+    admin/             # painel (login, visão geral, pedidos, tortas, entregas, usuários)
+    api/               # orders, products, delivery/quote, admin (login, usuários, ...)
   components/          # carrinho (context), cards, admin
   lib/
     payments/          # camada de pagamento (interface + mock)
     prisma.ts          # cliente Prisma (singleton)
-    auth.ts            # sessão simples do admin (HMAC)
+    auth.ts            # sessão do admin por usuário (cookie HMAC + uid)
+    admin-users.ts     # hash scrypt e validação dos usuários admin
+    delivery.ts        # motor de distância da entrega (CEP → faixas)
     order-status.ts    # fluxo de produção (transições permitidas)
 ```
 
@@ -115,11 +121,11 @@ src/
 
 Três documentos de controle, mantidos em `docs/`:
 
-- [**Diretrizes**](docs/DIRETRIZES.md) — todas as decisões de projeto (DEC-01…DEC-20)
+- [**Diretrizes**](docs/DIRETRIZES.md) — todas as decisões de projeto (DEC-01…DEC-22)
   com contexto e consequência, e os procedimentos obrigatórios (setup, schema,
   gateway de pagamento, git, verificação, segurança).
 - [**Regras de negócio**](docs/REGRAS-DE-NEGOCIO.md) — controle rastreável de cada
-  regra (BR-001…BR-026), com a referência no código onde ela vive.
+  regra (BR-001…BR-032), com a referência no código onde ela vive.
 - [**Técnico**](docs/TECNICO.md) — stack, arquitetura, modelo de dados, API,
   ambiente, segurança, achados técnicos (ACH-xxx) e registro de intercorrências.
 
@@ -166,5 +172,6 @@ Code, Cursor, Codex) com 21 temas, 57 gates de slop-test e quatro verbos
   cliente Prisma é gerado manualmente com `npx prisma generate`.
 - Dinheiro é sempre tratado em **centavos** (`priceCents`, `totalCents`) para
   evitar erros de ponto flutuante.
-- A autenticação do admin é uma senha única com cookie assinado (HMAC) —
-  suficiente para desenvolvimento; troque por Auth.js/SSO em produção.
+- A autenticação do admin é por **usuários** (e-mail + senha com hash scrypt e
+  papéis Admin × Equipe) com cookie assinado (HMAC) — suficiente para
+  desenvolvimento; troque por Auth.js/SSO em produção (ver DEC-22).

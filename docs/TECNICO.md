@@ -33,28 +33,35 @@ Repositório: projeto privado (`package.json` → `"private": true`), versão `0
 idalino/
 ├── prisma/
 │   ├── schema.prisma      # modelos + enums do banco
-│   ├── seed.mjs           # seed idempotente (3 categorias, 6 tortas)
+│   ├── seed.mjs           # seed idempotente (categorias, tortas, faixas de entrega, admin inicial)
 │   └── migrations/        # migrations versionadas (geradas por prisma migrate dev)
 ├── src/
 │   ├── app/               # rotas do App Router (Server Components por padrão)
 │   │   ├── page.tsx             # vitrine (home) — force-dynamic
 │   │   ├── tortas/[slug]/       # detalhe do produto
 │   │   ├── carrinho/            # carrinho
-│   │   ├── checkout/            # formulário de encomenda
+│   │   ├── checkout/            # formulário de encomenda (retirada × entrega)
 │   │   ├── pedido/[id]/         # acompanhamento + pagamento mock
-│   │   ├── admin/               # painel (login, visão geral, pedidos)
-│   │   └── api/                 # orders, products, admin (login, status)
+│   │   ├── admin/               # painel (login, visão geral, pedidos, tortas, entregas, usuários)
+│   │   └── api/                 # orders, products, delivery/quote, admin (login, usuários, ...)
 │   ├── components/        # componentes (cart, admin, torta-card, logo, botões)
 │   └── lib/
 │       ├── payments/      # camada de pagamento (types, mock, factory)
 │       ├── prisma.ts      # singleton do Prisma Client
-│       ├── auth.ts        # sessão admin (HMAC + cookie)
-│       ├── admin-guard.ts # guarda de rota admin (redirect p/ login)
+│       ├── auth.ts        # sessão admin por usuário (HMAC + uid)
+│       ├── admin-guard.ts # guardas de rota admin (login + papel)
+│       ├── admin-users.ts # hash scrypt e validação (Zod) dos usuários admin
 │       ├── order-status.ts# labels, cores e matriz de transições
-│       ├── constants.ts   # DELIVERY_FEE_CENTS, APP_NAME, APP_TAGLINE, APP_LOGO_PATH
-│       ├── format.ts      # formatBRL() — centavos → R$
+│       ├── constants.ts   # APP_NAME, APP_TAGLINE, APP_LOGO_PATH
+│       ├── delivery.ts    # motor de distância da entrega (CEP → coordenadas → faixa)
+│       ├── delivery-fees-admin.ts # validação (Zod) das faixas e do ponto de saída
+│       ├── torta-images.ts# fotos ilustrativas da vitrine (atribuição por ordem de exibição)
+│       ├── slugify.ts     # slug a partir de nome em pt-BR
+│       ├── products-admin.ts # validação (Zod) e slug único das tortas no painel
+│       ├── format.ts      # formatBRL() — centavos → R$; formatKm()/formatGrams()
 │       └── types.ts       # CartItem, CheckoutInput (compartilhados)
 ├── public/logoidalino.jpg # logo da marca
+├── public/tortas/         # fotos ilustrativas das tortas (vitrine); uploads do painel em public/tortas/upload (gitignored)
 ├── .claude/skills/i-have-adhd/  # skill de interação c/ o dono do projeto (DIRETRIZES §3.9; agents/ p/ Gemini/OpenAI)
 ├── .github/skills/i-have-adhd/  # cópia da skill p/ GitHub Copilot (instruções de agente)
 ├── .hallmark/log.json   # artefato runtime da skill hallmark (log de decisões de design) — ver ACH-12
@@ -64,22 +71,49 @@ idalino/
 └── .env / .env.example    # variáveis de ambiente
 ```
 
+**Procedimento temporário — fotos ilustrativas da vitrine (2026-08-19).** Enquanto
+as tortas não têm foto real, a vitrine (`src/app/page.tsx`) e a página de detalhe
+(`src/app/tortas/[slug]/page.tsx`) exibem fotos ilustrativas de `public/tortas/`
+atribuídas **por ordem de exibição** via `tortaImageForSlug()` em
+`src/lib/torta-images.ts` (produto na posição `i` da listagem recebe
+`TORTA_IMAGES[i % 6]`). Quando `Product.imageUrl` estiver preenchida, ela prevalece
+sobre a atribuição automática; sem foto alguma, cai para o `emoji`. O carrinho
+(`src/app/carrinho/page.tsx`) guarda a **foto resolvida na adição** como snapshot no
+item (`CartItem.imageUrl` — mesma regra da vitrine) e exibe o mesmo thumb nos itens;
+itens antigos no `localStorage`, sem o campo, caem no emoji. Este é um
+procedimento de popularização, **não uma regra de negócio** (BR-024): o fluxo
+regular é a **edição de cada torta no painel** (`/admin/tortas`, campo Imagem) — ver BR-027.
+
 ## 3. Modelo de dados (Prisma)
 
 - **Category** — categorias de produto (`name`, `slug` único).
-- **Product** — `priceCents` (int), `emoji` (default `🍰`), `imageUrl?`, `categoryId?`,
-  `available` (default `true`), `createdAt`.
+- **Product** — `priceCents` (int), `weightGrams?` (int, gramas — migration
+  `20260820020529_add_product_weight_grams`), `emoji` (default `🍰`), `imageUrl?`,
+  `categoryId?`, `available` (default `true`), `createdAt`.
 - **Customer** — `email` único, `name`, `phone?`.
 - **Order** — `code` (auto increment único), `status` (enum, default `PENDING_PAYMENT`),
-  `paymentMethod` (enum, default `MOCK`), `paymentId?`, `subtotalCents`,
-  `deliveryFeeCents`, `totalCents`, endereço completo, `notes?`, `productionNotes?`,
-  `createdAt`/`updatedAt`. Índices em `customerId` e `status`.
+  `paymentMethod` (enum, default `MOCK`), `deliveryType` (enum `DELIVERY | PICKUP`,
+  default `DELIVERY`), `paymentId?`, `subtotalCents`, `deliveryFeeCents`,
+  `deliveryDistanceKm?` (snapshot da distância calculada), `totalCents`, endereço
+  **opcional** (nulo na retirada), `notes?`, `productionNotes?`, `createdAt`/`updatedAt`.
+  Índices em `customerId` e `status`.
 - **OrderItem** — snapshot do item: `productName`, `unitPriceCents`, `quantity`;
   `productId?` (referência opcional); cascade com o pedido.
 - **ProductionEvent** — auditoria de transições: `fromStatus?`, `toStatus`, `note?`,
   `createdAt`; cascade com o pedido.
+- **DeliveryFeeRange** — faixa de preço da entrega: `minKm` (inclusivo), `maxKm?`
+  (exclusivo; nulo = faixa aberta), `priceCents` (int); validação de conjunto
+  (sem sobreposição, no máx. uma faixa aberta por último) em
+  `src/lib/delivery-fees-admin.ts`.
+- **StoreSettings** — ponto de saída da loja, linha única (`id` fixo `"store"`):
+  `cep`, `lat`/`lng` (resolvidos no salvamento), endereço de exibição opcional
+  (`street?`, `number?`, `neighborhood?`, `city?`, `state?`).
+- **AdminUser** — usuário do painel: `name`, `email` único (minúsculas),
+  `passwordHash` (scrypt `salt:hash` em hex — nunca texto puro), `role`
+  (`AdminRole`: `ADMIN` acesso total · `TEAM` só visão geral e pedidos),
+  `createdAt`/`updatedAt`.
 - **Enums:** `OrderStatus` (PENDING_PAYMENT, PAID, IN_PRODUCTION, READY, DELIVERED,
-  CANCELED) e `PaymentMethod` (MOCK, PIX, CARD).
+  CANCELED), `PaymentMethod` (MOCK, PIX, CARD) e `DeliveryType` (DELIVERY, PICKUP).
 
 IDs: CUID (`@default(cuid())`). Dinheiro: inteiro em centavos em todos os modelos.
 
@@ -88,11 +122,24 @@ IDs: CUID (`@default(cuid())`). Dinheiro: inteiro em centavos em todos os modelo
 | Método | Rota | Auth | Propósito |
 |---|---|---|---|
 | GET | `/api/products` | — | Lista produtos `available` (JSON para integrações) |
-| POST | `/api/orders` | — | Cria cliente + pedido + pagamento (valida com Zod, recalcula preços) |
+| POST | `/api/orders` | — | Cria cliente + pedido + pagamento (valida com Zod, recalcula preços; taxa de entrega por faixa — DEC-06) |
 | POST | `/api/orders/[id]/pay` | — | Simula webhook: aprova pagamento → `PAID` (só se `PENDING_PAYMENT`) |
-| POST | `/api/admin/login` | — | Valida `ADMIN_PASSWORD` e emite cookie de sessão (3 dias) |
+| GET | `/api/delivery/quote?cep=...` | — | Cotação da entrega para um CEP (prévia no checkout; distância + taxa da faixa) |
+| POST | `/api/admin/login` | — | Valida **e-mail + senha** de um usuário admin (AdminUser) e emite cookie de sessão (3 dias) |
 | DELETE | `/api/admin/login` | cookie | Logout (remove cookie) |
+| GET | `/api/admin/session` | cookie | Nome do usuário admin logado (cabeçalho do painel) |
+| POST | `/api/admin/users` | cookie + ADMIN | Cria usuário admin (e-mail único; senha com hash scrypt; papel default `TEAM`) |
+| PATCH | `/api/admin/users/[id]` | cookie + ADMIN | Atualiza usuário admin (senha ausente = mantém; não muda o próprio papel; não deixa sem Admin) |
+| DELETE | `/api/admin/users/[id]` | cookie + ADMIN | Exclui usuário admin (não exclui a si mesmo nem o último) |
 | POST | `/api/admin/orders/[id]/status` | cookie | Transição de status (valida matriz `canTransition`) |
+| POST | `/api/admin/products` | cookie | Cria torta (Zod; slug automático único) |
+| PATCH | `/api/admin/products/[id]` | cookie | Atualiza torta (parcial; regenera slug se o nome mudar) |
+| DELETE | `/api/admin/products/[id]` | cookie | Exclui torta (pedidos antigos preservam snapshot) |
+| POST | `/api/admin/products/image` | cookie | Upload de imagem (multipart "file"; JPG/PNG/WebP ≤ 5 MB, valida magic bytes) → retorna caminho público |
+| PATCH | `/api/admin/delivery/settings` | cookie | Salva o ponto de saída da loja (resolver CEP → coordenadas; upsert linha `store`) |
+| POST | `/api/admin/delivery-fees` | cookie | Cria faixa de entrega (valida conjunto: sem sobreposição, uma faixa aberta por último) |
+| PATCH | `/api/admin/delivery-fees/[id]` | cookie | Atualiza faixa (mesclada + validação do conjunto) |
+| DELETE | `/api/admin/delivery-fees/[id]` | cookie | Exclui faixa (pedidos antigos preservam a taxa cobrada) |
 
 Fluxo principal: `vitrine → carrinho (localStorage) → checkout → POST /api/orders
 → página /pedido/[id] (Pix mock) → POST /pay → admin gerencia produção`.
@@ -102,11 +149,15 @@ Fluxo principal: `vitrine → carrinho (localStorage) → checkout → POST /api
 | Variável | Default (dev) | Descrição |
 |---|---|---|
 | `DATABASE_URL` | `postgresql://idalino:idalino@localhost:5432/idalino?schema=public` | Conexão PostgreSQL |
-| `ADMIN_PASSWORD` | `idalino-admin` | Senha única do painel (trocar em produção) |
 | `ADMIN_SECRET` | `idalino-dev-secret` (fallback no código) | Segredo HMAC do cookie de sessão |
 | `COOKIE_SECURE` | `false` | `true` quando o site estiver em HTTPS |
 | `PAYMENT_PROVIDER` | `mock` | Provedor de pagamento (hoje só `mock`) |
-| `DELIVERY_FEE_CENTS` | `1500` | Taxa de entrega em centavos (≥ 0; inválido → 1500) |
+
+*(A taxa de entrega deixou de ser ambiente: agora é configurada por faixas de
+distância no painel `/admin/entregas` — ver `REGRAS-DE-NEGOCIO.md` BR-010.
+`ADMIN_PASSWORD` também deixou de ser usado: o acesso é por usuários admin
+criados no seed (`admin@idalino.local` / `idalino-admin`, dev) e geridos em
+`/admin/usuarios` — DEC-22.)*
 
 ## 6. Comandos úteis
 
@@ -122,13 +173,19 @@ Fluxo principal: `vitrine → carrinho (localStorage) → checkout → POST /api
 | `npm run db:reset` | Reseta o banco (perde dados; `--force`) |
 | `npx prisma generate` | Gera o cliente Prisma (obrigatório após instalar — `ignore-scripts`) |
 
+> **Nota:** `npx prisma generate` falha com `EPERM` (rename da DLL do query
+> engine) enquanto o dev server estiver rodando — o processo segura o arquivo.
+> Pare o `npm run dev` antes de gerar o cliente (ocorrido em 2026-08-20, INC-01
+> em §9).
+
 ## 7. Segurança (estado atual e limites)
 
-- **Sessão admin:** cookie `idalino_admin` com payload `exp=<ts>` assinado por
+- **Sessão admin:** cookie `idalino_admin` com payload `exp=<ts>&uid=<id>` assinado por
   HMAC-SHA256 (`timingSafeEqual` na verificação), `httpOnly`, `sameSite: lax`,
-  `maxAge` 3 dias. **Limite:** senha única em texto plano comparada diretamente; sem
-  rate-limit no login; sem MFA; fallback de `ADMIN_SECRET` embutido no código. Uso
-  **apenas** em desenvolvimento (ver `DEC-03`).
+  `maxAge` 3 dias. O login valida e-mail + senha contra `AdminUser` (hash scrypt do
+  Node, `src/lib/admin-users.ts`). **Limites:** sem rate-limit no login; sem MFA;
+  fallback de `ADMIN_SECRET` embutido no código; sessões emitidas antes da DEC-22
+  (sem `uid`) exigem novo login. Uso **apenas** em desenvolvimento (ver `DEC-03`/`DEC-22`).
 - **Segredos:** `.env` está no `.gitignore`; `.env.example` contém apenas defaults de
   dev. Nunca commitar segredos reais.
 - **Preços:** nunca confiar no cliente (revalidação no servidor — `BR-007`).
@@ -141,7 +198,7 @@ Novas descobertas entram aqui com data e referência ao código.
 
 | ID | Data | Achado | Implicação / Recomendação |
 |---|---|---|---|
-| ACH-01 | 2026-08-19 | O provedor mock guarda pagamentos num `Map` **em memória** no nível do módulo (`src/lib/payments/mock.ts`). | Pagamentos somem ao reiniciar o servidor. Aceitável em dev; um gateway real persiste o estado no provedor. Registrar na integração real (§3.3 de `DIRETRIZES.md`). |
+| ACH-01 | 2026-08-19 | O provedor mock guarda pagamentos num `Map` **em memória** no nível do módulo (`src/lib/payments/mock.ts`). **Obs. (2026-08-20):** o código Pix fake tem o valor **fixo** ("689.90") independente do total real do pedido — é apenas ilustrativo; o valor oficial é `Order.totalCents`. | Pagamentos somem ao reiniciar o servidor. Aceitável em dev; um gateway real persiste o estado no provedor. Registrar na integração real (§3.3 de `DIRETRIZES.md`). |
 | ACH-02 | 2026-08-19 | `POST /api/orders/[id]/pay` faz "ler status → atualizar pedido" sem transação/atomicidade; duas chamadas paralelas podem aprovar duas vezes (efeito idempotente no mock, mas sem garantia formal). | Para produção, tornar a aprovação idempotente e atômica (ex.: update condicional `WHERE status = 'PENDING_PAYMENT'`). |
 | ACH-03 | 2026-08-19 | `Order.productionNotes` existe no schema mas **não tem UI** no painel (campo sem interface). | Capacidade pronta; falta a tela. Não confundir com `Order.notes` (cliente). |
 | ACH-04 | 2026-08-19 | Não há **testes automatizados** (unit/integration/e2e) no projeto; verificação é manual (lint, build, fluxos). | Próximo passo recomendado: ao menos testes das rotas de API (orders, pay, status) e da matriz de transições. |
@@ -155,6 +212,12 @@ Novas descobertas entram aqui com data e referência ao código.
 | ACH-12 | 2026-08-19 | A skill hallmark grava `/.hallmark/log.json` na raiz do projeto — log runtime de decisões de design (brief, macroestrutura, tema) — e o arquivo **não está no `.gitignore`** (aparece como untracked no `git status`). | **Decidido (2026-08-19): manter versionado** como histórico de design enquanto as views evoluem (decisão DEC-19 em `DIRETRIZES.md`). Reavaliar quando o design estabilizar: se virar ruído, adicionar `/.hallmark/` ao `.gitignore`. |
 | ACH-13 | 2026-08-19 | Sistema de design implementado em `src/app/globals.css` via Tailwind `@theme inline` com **tokens oklch** (papel/ink/muted/accent rosé/focus) e fontes **Fraunces + Geist**, aplicado às views (redesign hallmark, DEC-18). | Manter os tokens centralizados no `@theme`; não espalhar cores/fontes hardcoded nas views. Alterações de identidade visual devem tocar `globals.css` (+ `src/lib/constants.ts`), nunca páginas. |
 | ACH-14 | 2026-08-19 | Carrinho (`src/components/cart/cart-context.tsx`) usa **hidratação SSR-safe**: estado inicial vazio de propósito (casa com o HTML do servidor) + leitura única do `localStorage` após a montagem; a regra `set-state-in-effect` é suprimida com `eslint-disable` justificado (commit `0794ea6`). | Padrão canônico de hidratação client-only em Next.js — preservar ao mexer no carrinho; não "corrigir" o `set-state-in-effect` removendo a supressão. |
+| ACH-15 | 2026-08-20 | CRUD de tortas no painel implementado: telas `/admin/tortas` (lista/novo/editar) e rotas `POST/PATCH/DELETE /api/admin/products` com validação Zod; campo `Product.weightGrams` (migration `20260820020529_add_product_weight_grams`); seed com pesos; `next.config.ts` com `remotePatterns` https; slug automático a partir do nome (`src/lib/slugify.ts`). **Fecha ACH-10** (gestão de catálogo). | Imagem ainda é por URL (campo de texto + prévia); upload de arquivo fica como melhoria futura. Exclusão de torta preserva pedidos antigos (snapshot DEC-08). |
+| ACH-16 | 2026-08-20 | Upload de imagem no formulário de tortas: rota `POST /api/admin/products/image` salva em `public/tortas/upload/` (JPG/PNG/WebP ≤ 5 MB, validação por magic bytes, nome aleatório) e retorna o caminho público; normalização de `/public/` digitado por engano no `imageUrl` (`normalizeImageUrl` em `src/lib/products-admin.ts`); componente `TortaImage` com fallback para o emoji quando a imagem falha (vitrine, detalhe e lista admin). | Corrige o caso real: caminho `/public/tortas/...` salvo pelo dono gerava 404 e só o placeholder aparecia; valor já salvo foi normalizado no banco. `public/tortas/upload/` está no `.gitignore`. |
+| ACH-17 | 2026-08-20 | Motor de distância da entrega (migration `20260820153925_add_delivery_fees`): `DeliveryFeeRange` + `StoreSettings` + `Order.deliveryType`/`deliveryDistanceKm`/endereço opcional; motor isolado em `src/lib/delivery.ts` usando serviços **gratuitos sem chave** — AwesomeAPI CEP (coordenadas) com fallback **Nominatim/OSM por `postalcode=`** (o texto livre "CEP X Brasil" devolvia correspondência fuzzy incorreta — ver INC-01) — e distância em **linha reta (haversine)**, com cache em memória. | **Limitações conhecidas:** distância aproximada (linha reta × CEP, não rota real); dependência de serviços gratuitos sem SLA (timeout de 5 s por chamada; fallback Nominatim limitado a 1 req/s). **CEPs ausentes da base da AwesomeAPI e sem postcode no OSM são recusados como "CEP inválido"** mesmo sendo válidos (ex.: 04000000, Ibirapuera/SP). Para produção, trocar o motor por provedor preciso (ex.: Google Distance Matrix) — ver decisão DEC-21. |
+| ACH-18 | 2026-08-20 | Auth do admin migrou de senha única para usuários (migration `20260820160934_add_admin_users`): modelo `AdminUser` com `passwordHash` **scrypt** do Node (`salt:hash`, `timingSafeEqual`) — sem dependência externa; sessão HMAC agora carrega `uid`; rotas `/api/admin/users` e `/api/admin/session`; tela `/admin/usuarios`; seed cria `admin@idalino.local` / `idalino-admin` (dev; nunca sobrescreve senha alterada). `ADMIN_PASSWORD` ficou **inerte** no `.env` (o login não o lê mais). | **Limites:** continua nível dev — sem rate-limit no login, sem MFA; produção deve trocar por Auth.js/SSO (DEC-22). Sessões antigas (sem `uid`) exigem novo login. A implementação substitui a DEC-03. |
+| ACH-19 | 2026-08-20 | Papéis admin (migration `20260820162056_add_admin_role`): enum `AdminRole` (`ADMIN` \| `TEAM`) em `AdminUser`; guardas por papel — `checkAdminRole()`/`roleDeniedResponse()` nas APIs (401/403) e `requireAdminRole()` nas páginas (redirect p/ `/admin`); telas/rotas de tortas, entregas e usuários exigem `ADMIN`; status de pedido segue acessível a `TEAM`; novo usuário nasce `TEAM`; proteções de papel no PATCH (não muda o próprio papel; não deixa o painel sem Admin). | Navegação do header filtra links por papel (via `/api/admin/session` → `role`). Nenhum impacto no fluxo público/checkout. |
+| ACH-20 | 2026-08-20 | O `.env` de dev tem `ADMIN_PASSWORD="idalino-admin"` **com aspas literais**: o valor carregado em `process.env` incluiu as aspas (o login antigo de senha única só aceitava a senha digitada **com** as aspas). Com a DEC-22 a variável ficou inerte (login por usuário em banco), mas o quirk vale para qualquer outra variável do `.env`. | Não é bug do código — é como o valor foi gravado no arquivo. Ao editar `.env`, gravar valores **sem aspas** quando o consumidor não as esperar (senhas/secrets); conferir o valor efetivo após o load. |
 
 ## 9. Registro de intercorrências
 
@@ -164,6 +227,8 @@ data, sintoma, causa, impacto e resolução. Nunca sobrescrever ocorrência anti
 | ID | Data | Descrição / Sintoma | Causa raiz | Impacto | Resolução / Status |
 |---|---|---|---|---|---|
 | — | — | *(nenhuma intercorrência registrada até 2026-08-19)* | — | — | — |
+| INC-01 | 2026-08-20 | **Cotações de entrega erradas:** vários CEPs (ex.: 04000000, 90000000, 99999999) devolviam a **mesma distância (~246 km)** e a mesma taxa, independentemente do CEP. | O fallback do motor de distância usava busca por **texto livre** no Nominatim ("CEP X Brasil"), que retornava correspondência **fuzzy** — um prédio em Araraquara/SP — para qualquer CEP não encontrado na AwesomeAPI. | Pedidos de entrega para CEPs fora da base da AwesomeAPI seriam precificados com distância (e taxa) erradas. | Trocado para a busca **por `postalcode=`** no Nominatim (precisa); CEPs sem correspondência agora são recusados com "CEP inválido" (comportamento intencional, BR-031). Verificado por observação (quotes de CEPs próximos/distantes) em 2026-08-20. |
+| INC-02 | 2026-08-20 | **Thumb do carrinho sem a foto da torta:** no `/carrinho`, o item exibia só o `emoji` (🍰) onde deveria estar a foto — "imagem da torta não correta" relatada pelo dono. | `CartItem` não tinha campo de imagem, as duas entradas de adição (`TortaCard` e `AddToCartButton`) não guardavam a foto e a página do carrinho renderizava apenas `item.emoji`. | Thumb não identificava a torta (todos os itens com a mesma carinha), divergindo da vitrine e do detalhe — único ponto do fluxo público afetado. | `CartItem.imageUrl?` (snapshot da foto resolvida na adição — mesma regra da vitrine: `imageUrl` real → ilustrativa por ordem → emoji); thumbs passaram a usar `TortaImage` com fallback. **Twin check:** vitrine/detalhe já resolviam corretamente; checkout e pedido não exibem thumb; lista admin mostra o `imageUrl` real (intencional). Verificado com lint/build verdes e smoke test (home com 5 fotos, `/carrinho` 200); conferência visual do thumb no navegador fica pendente (carrinho é client-side). |
 
 ## 10. Controle de mudanças deste documento
 
@@ -174,3 +239,11 @@ data, sintoma, causa, impacto e resolução. Nunca sobrescrever ocorrência anti
 | 2026-08-19 | Documentação | ACH-12: decisão de manter `.hallmark/log.json` versionado (DEC-19 em DIRETRIZES.md) |
 | 2026-08-19 | Documentação | Achado ACH-13 (sistema de design em tokens oklch + Fraunces/Geist em `globals.css`, redesign hallmark) |
 | 2026-08-19 | Documentação | Revisão das sessões do dia: achado ACH-14 (hidratação SSR-safe do carrinho, commit `0794ea6`); §2 com nota da pasta `agents/` da skill i-have-adhd |
+| 2026-08-19 | Documentação | §2: `public/tortas/` (fotos ilustrativas) e `src/lib/torta-images.ts` — **procedimento temporário de popularização** por ordem de exibição (não é regra de negócio; fluxo regular: edição da torta via `imageUrl`) |
+| 2026-08-20 | Documentação | CRUD de tortas no admin (fecha ACH-10): campo `weightGrams` (migration `20260820020529_add_product_weight_grams`), rotas `/api/admin/products`, telas `/admin/tortas` (lista/novo/editar), seed com pesos, `next.config.ts` com `remotePatterns` https; achado ACH-15 |
+| 2026-08-20 | Documentação | Upload de imagem no formulário de tortas (rota `POST /api/admin/products/image`, validação por magic bytes, `public/tortas/upload/` gitignored); normalização de `/public/` no `imageUrl`; componente `TortaImage` com fallback de emoji; achado ACH-16 |
+| 2026-08-20 | Documentação | Preço de entrega por faixas de distância: migration `20260820153925_add_delivery_fees` (`DeliveryFeeRange`, `StoreSettings`, `Order.deliveryType` + `deliveryDistanceKm` + endereço opcional), rotas `/api/delivery/quote` e `/api/admin/delivery-fees(+/[id])` e `/api/admin/delivery/settings`, telas `/admin/entregas` (novo/editar), motor em `src/lib/delivery.ts` (AwesomeAPI + Nominatim + haversine), remoção de `DELIVERY_FEE_CENTS`; achado ACH-17 |
+| 2026-08-20 | Documentação | Usuários admin: migration `20260820160934_add_admin_users` (modelo `AdminUser`, hash scrypt), login por e-mail + senha, rotas `/api/admin/users(+/[id])` e `/api/admin/session`, tela `/admin/usuarios`, seed do admin inicial; `ADMIN_PASSWORD` inerte no `.env`; achado ACH-18 |
+| 2026-08-20 | Documentação | Papéis admin: migration `20260820162056_add_admin_role` (enum `AdminRole`), guardas por papel em APIs e páginas (tortas/entregas/usuários exigem ADMIN; pedidos acessível a TEAM), formulário/lista com papel, header filtra links; achado ACH-19 |
+| 2026-08-20 | Documentação | Revisão das sessões do dia: §2 (estrutura) e §5 sem `ADMIN_PASSWORD` (inerte); §6 com nota do EPERM no `prisma generate` (dev server aberto); ACH-01 com obs. do valor fixo do Pix mock; ACH-17 atualizado (fallback por postalcode; CEPs irresolvíveis recusados); achado ACH-20 (aspas literais no `.env`); **INC-01** (fallback de texto livre do Nominatim com distâncias erradas) |
+| 2026-08-20 | Documentação | §2: carrinho guarda a foto resolvida na adição (`CartItem.imageUrl`, snapshot) e exibe o mesmo thumb da vitrine; **INC-02** (thumb do carrinho sem a foto da torta — só emoji) |
