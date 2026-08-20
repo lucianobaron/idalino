@@ -2,7 +2,9 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { formatBRL } from "@/lib/format";
-import { AddToCartButton } from "@/components/add-to-cart-button";
+import { CartControls } from "@/components/cart/cart-controls";
+import { TortaImage } from "@/components/torta-image";
+import { tortaImageForSlug } from "@/lib/torta-images";
 
 export const dynamic = "force-dynamic";
 
@@ -12,12 +14,23 @@ export default async function TortaPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const product = await prisma.product.findUnique({
-    where: { slug },
-    include: { category: true },
-  });
+  const [product, orderedSlugs] = await Promise.all([
+    prisma.product.findUnique({
+      where: { slug },
+      include: { category: true },
+    }),
+    prisma.product
+      .findMany({
+        where: { available: true },
+        orderBy: { createdAt: "asc" },
+        select: { slug: true },
+      })
+      .then((rows) => rows.map((r) => r.slug)),
+  ]);
 
   if (!product || !product.available) notFound();
+
+  const imageUrl = product.imageUrl ?? tortaImageForSlug(slug, orderedSlugs);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
@@ -32,8 +45,15 @@ export default async function TortaPage({
       </nav>
 
       <div className="grid gap-10 lg:grid-cols-2">
-        <div className="flex h-80 items-center justify-center rounded-3xl border border-rule bg-paper-2 text-[10rem] lg:h-[26rem]">
-          <span aria-hidden>{product.emoji}</span>
+        <div className="relative h-80 overflow-hidden rounded-3xl border border-rule bg-paper-2 lg:h-[26rem]">
+          <TortaImage
+            src={imageUrl}
+            alt={product.name}
+            emoji={product.emoji}
+            sizes="(max-width: 1024px) 100vw, 50vw"
+            className="object-cover"
+            emojiClassName="text-[10rem]"
+          />
         </div>
 
         <div className="flex flex-col gap-4">
@@ -63,12 +83,14 @@ export default async function TortaPage({
           </div>
 
           <div className="mt-4">
-            <AddToCartButton
+            <CartControls
               productId={product.id}
               slug={product.slug}
               name={product.name}
               emoji={product.emoji}
               priceCents={product.priceCents}
+              imageUrl={imageUrl}
+              variant="hero"
             />
           </div>
 

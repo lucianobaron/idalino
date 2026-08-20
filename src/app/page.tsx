@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { TortaCard } from "@/components/torta-card";
 import { APP_TAGLINE } from "@/lib/constants";
+import { tortaImageForSlug } from "@/lib/torta-images";
 
 // Página dinâmica: consulta o banco a cada acesso (sem cache de build)
 export const dynamic = "force-dynamic";
@@ -34,6 +35,8 @@ export default async function HomePage() {
     }),
     prisma.category.findMany({ orderBy: { name: "asc" } }),
   ]);
+
+  const orderedSlugs = products.map((p) => p.slug);
 
   return (
     <div>
@@ -86,6 +89,7 @@ export default async function HomePage() {
               description={product.description}
               priceCents={product.priceCents}
               emoji={product.emoji}
+              imageUrl={product.imageUrl ?? tortaImageForSlug(product.slug, orderedSlugs)}
             />
           ))}
         </div>

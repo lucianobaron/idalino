@@ -10,6 +10,11 @@
 :root {
   --background: oklch(97.5% 0.012 70); /* papel quente creme */
   --foreground: oklch(24% 0.02 45); /* tinta marrom-escura quente */
+
+  /* Easing (hallmark motion.md — curvas nomeadas, sem `ease` default) */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
 }
 
 @theme inline {
@@ -60,6 +65,28 @@ body {
 :focus-visible {
   outline: 2px solid var(--color-focus);
   outline-offset: 2px;
+}
+
+/* Hallmark · component: cart controls (stepper + lixeira) · genre: playful · theme: custom (soft/acolhedor)
+ * states: default · in-cart (stepper) · disabled (− em 1) · reduced-motion (150 ms, global)
+ * contrast: pass (accent sobre branco) */
+
+/* Bump da badge do carrinho — one-shot, dispara via remount da badge em
+ * CartButton (DEC-23; mantido pela DEC-24). Anima só transform/opacity. */
+@keyframes cart-bump {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.35);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.cart-badge-bump {
+  animation: cart-bump 320ms var(--ease-out);
 }
 
 @media (prefers-reduced-motion: reduce) {
