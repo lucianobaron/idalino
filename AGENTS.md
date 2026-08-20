@@ -3,7 +3,7 @@
 Leia estes documentos **no início de toda sessão, antes de qualquer trabalho**,
 nesta ordem:
 
-1. `docs/DIRETRIZES.md` — fonte da verdade do projeto: decisões (DEC-01…DEC-18)
+1. `docs/DIRETRIZES.md` — fonte da verdade do projeto: decisões (DEC-01…DEC-20)
    e procedimentos obrigatórios (§3.1–§3.12). Quando conflitar com qualquer
    outra referência, este arquivo manda — exceto instrução direta do usuário.
 2. `fable-method/AGENTS.md` — método de raciocínio obrigatório (loop

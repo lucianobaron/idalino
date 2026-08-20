@@ -55,7 +55,7 @@ idalino/
 │       ├── format.ts      # formatBRL() — centavos → R$
 │       └── types.ts       # CartItem, CheckoutInput (compartilhados)
 ├── public/logoidalino.jpg # logo da marca
-├── .claude/skills/i-have-adhd/  # skill de interação c/ o dono do projeto (DIRETRIZES §3.9)
+├── .claude/skills/i-have-adhd/  # skill de interação c/ o dono do projeto (DIRETRIZES §3.9; agents/ p/ Gemini/OpenAI)
 ├── .github/skills/i-have-adhd/  # cópia da skill p/ GitHub Copilot (instruções de agente)
 ├── .hallmark/log.json   # artefato runtime da skill hallmark (log de decisões de design) — ver ACH-12
 ├── fable-method/          # vendored (diretriz de agentes) — ver DIRETRIZES.md DEC-11
@@ -154,6 +154,7 @@ Novas descobertas entram aqui com data e referência ao código.
 | ACH-11 | 2026-08-19 | O painel admin permite transicionar `PENDING_PAYMENT → PAID` **sem** confirmação do gateway (override manual via `POST /api/admin/orders/[id]/status` — a matriz `canTransition` autoriza e a rota não checa pagamento). | Garantia de "pagar antes de produzir" vale só para o fluxo do cliente. Quando o gateway real entrar, decidir se o override permanece (ex.: pedido pago offline) ou passa a exigir confirmação/justificativa. Ver BR-003. |
 | ACH-12 | 2026-08-19 | A skill hallmark grava `/.hallmark/log.json` na raiz do projeto — log runtime de decisões de design (brief, macroestrutura, tema) — e o arquivo **não está no `.gitignore`** (aparece como untracked no `git status`). | **Decidido (2026-08-19): manter versionado** como histórico de design enquanto as views evoluem (decisão DEC-19 em `DIRETRIZES.md`). Reavaliar quando o design estabilizar: se virar ruído, adicionar `/.hallmark/` ao `.gitignore`. |
 | ACH-13 | 2026-08-19 | Sistema de design implementado em `src/app/globals.css` via Tailwind `@theme inline` com **tokens oklch** (papel/ink/muted/accent rosé/focus) e fontes **Fraunces + Geist**, aplicado às views (redesign hallmark, DEC-18). | Manter os tokens centralizados no `@theme`; não espalhar cores/fontes hardcoded nas views. Alterações de identidade visual devem tocar `globals.css` (+ `src/lib/constants.ts`), nunca páginas. |
+| ACH-14 | 2026-08-19 | Carrinho (`src/components/cart/cart-context.tsx`) usa **hidratação SSR-safe**: estado inicial vazio de propósito (casa com o HTML do servidor) + leitura única do `localStorage` após a montagem; a regra `set-state-in-effect` é suprimida com `eslint-disable` justificado (commit `0794ea6`). | Padrão canônico de hidratação client-only em Next.js — preservar ao mexer no carrinho; não "corrigir" o `set-state-in-effect` removendo a supressão. |
 
 ## 9. Registro de intercorrências
 
@@ -172,3 +173,4 @@ data, sintoma, causa, impacto e resolução. Nunca sobrescrever ocorrência anti
 | 2026-08-19 | Documentação | §2: inclusão de `.claude/skills/i-have-adhd`, `.github/skills/i-have-adhd` e `.hallmark/log.json` na estrutura; achado ACH-12 (artefato runtime da hallmark fora do .gitignore) |
 | 2026-08-19 | Documentação | ACH-12: decisão de manter `.hallmark/log.json` versionado (DEC-19 em DIRETRIZES.md) |
 | 2026-08-19 | Documentação | Achado ACH-13 (sistema de design em tokens oklch + Fraunces/Geist em `globals.css`, redesign hallmark) |
+| 2026-08-19 | Documentação | Revisão das sessões do dia: achado ACH-14 (hidratação SSR-safe do carrinho, commit `0794ea6`); §2 com nota da pasta `agents/` da skill i-have-adhd |

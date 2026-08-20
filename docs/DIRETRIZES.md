@@ -250,6 +250,25 @@ Legenda de status: `aceita` (vigente) · `substituída` (vale o histórico, não
   estabilizar e o log virar ruído, reavaliar (adicionar `/.hallmark/` ao
   `.gitignore`), registrando a mudança neste arquivo.
 
+### DEC-20 — Skill `i-have-adhd` incorporada: formato de interação com o dono do projeto
+- **Status:** aceita
+- **Contexto:** o dono do projeto tem TDAH — interações precisam de um formato que
+  permita agir imediatamente, sem contexto perdido entre mensagens.
+- **Decisão:** a skill `i-have-adhd` (vendored em `.claude/skills/i-have-adhd/`,
+  com cópia em `.github/skills/i-have-adhd/` para GitHub Copilot; commit `cfba827`)
+  define o **formato de interação obrigatório** entre o harness/agentes e o dono do
+  projeto: (1) confirmação do que foi compreendido, (2) resumo numerado das etapas,
+  (3) conclusão com o que ficou pronto e uma única próxima ação. Vale em **toda**
+  resposta, até o dono dizer "stop adhd mode". Procedimento operacional: §3.9
+  (bloco "Formato de interação").
+- **Onde:** `.claude/skills/i-have-adhd/SKILL.md` (+ `agents/` com perfis para
+  Gemini/OpenAI) e `.github/skills/i-have-adhd/SKILL.md`.
+- **Consequência:** respostas seguem a estrutura obrigatória; regras da skill
+  (liderar com a próxima ação, listas ≤ 5 itens, sem preâmbulo/encerramento
+  vazios, estimativas de tempo concretas) prevalecem até o "stop adhd mode".
+  Quando a estrutura da skill conflitar com outra diretriz, a instrução direta do
+  usuário manda acima de tudo.
+
 ## 3. Procedimentos obrigatórios
 
 ### 3.1 Setup do ambiente (novo dev / máquina nova)
@@ -436,3 +455,4 @@ Não existe check-out apressado que dispense esta conferência.
 | 2026-08-19 | Diretrizes | §3.9: inclusão do skill i-have-adhd (formato de interação obrigatório com o dono do projeto) |
 | 2026-08-19 | Diretrizes | Inclusão do procedimento **§3.12 — conferência obrigatória antes de declarar a tarefa concluída** (existe informação a registrar? documentação atualizada?), com referências no §3.6 e §3.9 |
 | 2026-08-19 | Diretrizes | Inclusão de DEC-19 (`.hallmark/log.json` mantido versionado como histórico de design, fechando o achado ACH-12) |
+| 2026-08-19 | Diretrizes | Inclusão de DEC-20 (skill `i-have-adhd` incorporada — formato de interação obrigatório com o dono do projeto, fechando a lacuna de DEC para a skill do commit `cfba827`) |

@@ -115,7 +115,7 @@ src/
 
 Três documentos de controle, mantidos em `docs/`:
 
-- [**Diretrizes**](docs/DIRETRIZES.md) — todas as decisões de projeto (DEC-01…DEC-18)
+- [**Diretrizes**](docs/DIRETRIZES.md) — todas as decisões de projeto (DEC-01…DEC-20)
   com contexto e consequência, e os procedimentos obrigatórios (setup, schema,
   gateway de pagamento, git, verificação, segurança).
 - [**Regras de negócio**](docs/REGRAS-DE-NEGOCIO.md) — controle rastreável de cada
